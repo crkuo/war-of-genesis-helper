@@ -1,0 +1,23 @@
+﻿# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.BIN/
+.DS_Store
+
+# Editor & IDE settings
+.vscode/
+.idea/
+*.suo
+*.user
+*.swp
+*.swo
+
+# Temporary and log files
+*.log
+*.tmp
+*.bak
+
+# Archives (don't commit zip files to repo)
+*.zip
+
