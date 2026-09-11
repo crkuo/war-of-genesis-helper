@@ -13,7 +13,7 @@
 ## 🌐 Live Web Version
 
 Access the web version instantly without installing anything:  
-👉 **`https://<your-username>.github.io/war-of-genesis-helper/`**
+👉 **`https://titlee2111.github.io/war-of-genesis-helper/`**
 
 ---
 
