@@ -508,13 +508,13 @@
     <div class="player-avatar">⚔️</div>
     <div class="player-name-wrap">
       <div class="player-name" id="barPlayerName">Lee <span style="font-size:12px; background:#1f6feb; padding:2px 8px; border-radius:10px; color:#fff;">Cấp 32</span></div>
-      <div class="player-meta" id="barPlayerMeta">Ải hiện tại: 2-8 Rất khó | Lực chiến: 21,027</div>
+      <div class="player-meta" id="barPlayerMeta">Ải hiện tại: 1-1 Dễ | Lực chiến: 100</div>
     </div>
   </div>
 
   <div class="player-stats">
-    <div class="stat-pill gold">💰 Vàng: <b id="barGold">667,776</b></div>
-    <div class="stat-pill gem">💎 Kim Cương: <b id="barGem">3</b></div>
+    <div class="stat-pill gold">💰 Vàng: <b id="barGold">0</b></div>
+    <div class="stat-pill gem">💎 Kim Cương: <b id="barGem">0</b></div>
     
     <!-- DETAILED EXP PILL WITH MINI PROGRESS BAR -->
     <div class="stat-pill exp" id="barExpPill" title="Tiến độ cấp độ hiện tại">
@@ -527,8 +527,8 @@
       </div>
     </div>
 
-    <div class="stat-pill cp">⚔️ Lực chiến: <b id="barCp">21,027</b></div>
-    <div class="stat-pill dps">⚡ DPS Thực Tế: <b id="barDps">3,415</b></div>
+    <div class="stat-pill cp">⚔️ Lực chiến: <b id="barCp">100</b></div>
+    <div class="stat-pill dps">⚡ DPS Thực Tế: <b id="barDps">--</b></div>
   </div>
 
   <div class="player-actions">
@@ -903,7 +903,7 @@
         </div>
         <input type="range" class="level-slider" id="dpsSlider" min="1000" max="30000" step="1" value="3415" oninput="updateDps(this.value)">
         <div style="display:flex; justify-content:space-between; font-size:11px; color:#8b949e; margin-top:4px;">
-          <span id="dpsLabel" style="color:#ff7b72; font-weight:bold;">3,415 DPS (Thực tế Lee)</span>
+          <span id="dpsLabel" style="color:#ff7b72; font-weight:bold;">DPS Mô Phỏng</span>
           <span>Max 30,000 DPS</span>
         </div>
       </div>
@@ -1103,7 +1103,7 @@
     <div class="exp-progress-card">
       <div class="exp-card-header">
         <div>
-          <span style="font-size:18px; font-weight:bold; color:var(--text-bright);" id="expCardTitle">Cấp Độ 32 ➡️ 33</span>
+          <span style="font-size:18px; font-weight:bold; color:var(--text-bright);" id="expCardTitle">Cấp Độ 1 ➡️ 2</span>
           <span style="font-size:12px; color:#bc8cff; margin-left:8px; font-weight:bold;" id="expCardTierUnlocked">Tier Trang Bị Tối Đa: Tier 5</span>
         </div>
         <div style="font-size:16px; font-weight:bold; color:#bc8cff;" id="expCardPctBig">30.73%</div>
@@ -1125,15 +1125,15 @@
     <div class="profile-grid-summary">
       <div class="summary-card">
         <div class="summary-card-title">Tên Người Chơi</div>
-        <div class="summary-card-val highlight" id="profNick">Lee</div>
+        <div class="summary-card-val highlight" id="profNick">Tân Thủ (Chưa nạp save)</div>
       </div>
       <div class="summary-card">
         <div class="summary-card-title">Cấp Độ Hiện Tại</div>
-        <div class="summary-card-val" id="profLv">32</div>
+        <div class="summary-card-val" id="profLv">1</div>
       </div>
       <div class="summary-card">
         <div class="summary-card-title">Lực Chiến (Combat Power)</div>
-        <div class="summary-card-val highlight" id="profCp">21,027</div>
+        <div class="summary-card-val highlight" id="profCp">100</div>
       </div>
       <div class="summary-card">
         <div class="summary-card-title">DPS Thực Tế (Combat)</div>
@@ -1141,7 +1141,7 @@
       </div>
       <div class="summary-card">
         <div class="summary-card-title">Ải Vượt Qua</div>
-        <div class="summary-card-val" id="profStage">2-8 Rất khó</div>
+        <div class="summary-card-val" id="profStage">1-1 Dễ</div>
       </div>
       <div class="summary-card">
         <div class="summary-card-title">Vàng Dự Trữ</div>
@@ -12090,804 +12090,7 @@ const stageData = [
   }
 ];
 const userLevelsData = {"1": {"level": 1, "req_exp": 252, "rewards": [], "reward_counts": [], "max_equip_tier": 1}, "2": {"level": 2, "req_exp": 578, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 2}, "3": {"level": 3, "req_exp": 1218, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 2}, "4": {"level": 4, "req_exp": 2178, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 2}, "5": {"level": 5, "req_exp": 3678, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "6": {"level": 6, "req_exp": 5658, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "7": {"level": 7, "req_exp": 8394, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "8": {"level": 8, "req_exp": 12138, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "9": {"level": 9, "req_exp": 17178, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "10": {"level": 10, "req_exp": 21678, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "11": {"level": 11, "req_exp": 36748, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "12": {"level": 12, "req_exp": 52504, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "13": {"level": 13, "req_exp": 68960, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "14": {"level": 14, "req_exp": 86132, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 3}, "15": {"level": 15, "req_exp": 104360, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "16": {"level": 16, "req_exp": 123674, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "17": {"level": 17, "req_exp": 144104, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "18": {"level": 18, "req_exp": 168464, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "19": {"level": 19, "req_exp": 197615, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "20": {"level": 20, "req_exp": 238271, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "21": {"level": 21, "req_exp": 341011, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "22": {"level": 22, "req_exp": 490511, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "23": {"level": 23, "req_exp": 707838, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "24": {"level": 24, "req_exp": 1014975, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 4}, "25": {"level": 25, "req_exp": 1448325, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "26": {"level": 26, "req_exp": 2032115, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "27": {"level": 27, "req_exp": 2791491, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "28": {"level": 28, "req_exp": 3752518, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "29": {"level": 29, "req_exp": 4942177, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "30": {"level": 30, "req_exp": 6388369, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "31": {"level": 31, "req_exp": 8975804, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "32": {"level": 32, "req_exp": 12030940, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "33": {"level": 33, "req_exp": 15632473, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "34": {"level": 34, "req_exp": 19861637, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 5}, "35": {"level": 35, "req_exp": 24802205, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "36": {"level": 36, "req_exp": 30540486, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "37": {"level": 37, "req_exp": 37165328, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "38": {"level": 38, "req_exp": 44768117, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "39": {"level": 39, "req_exp": 53442777, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "40": {"level": 40, "req_exp": 63285771, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "41": {"level": 41, "req_exp": 78872993, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "42": {"level": 42, "req_exp": 96374889, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "43": {"level": 43, "req_exp": 115936252, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "44": {"level": 44, "req_exp": 137705329, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "45": {"level": 45, "req_exp": 161833825, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "46": {"level": 46, "req_exp": 188476899, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "47": {"level": 47, "req_exp": 217793167, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "48": {"level": 48, "req_exp": 249944702, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "49": {"level": 49, "req_exp": 285267563, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "50": {"level": 50, "req_exp": 324106451, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "51": {"level": 51, "req_exp": 381667156, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "52": {"level": 52, "req_exp": 444921657, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "53": {"level": 53, "req_exp": 514367879, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "54": {"level": 54, "req_exp": 590515222, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "55": {"level": 55, "req_exp": 673884561, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "56": {"level": 56, "req_exp": 765008246, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "57": {"level": 57, "req_exp": 864430102, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "58": {"level": 58, "req_exp": 972705430, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "59": {"level": 59, "req_exp": 1090681954, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "60": {"level": 60, "req_exp": 1219226524, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "61": {"level": 61, "req_exp": 1402318546, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "62": {"level": 62, "req_exp": 1601555554, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "63": {"level": 63, "req_exp": 1818143398, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "64": {"level": 64, "req_exp": 2053312678, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "65": {"level": 65, "req_exp": 2308318744, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "66": {"level": 66, "req_exp": 2584441696, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "67": {"level": 67, "req_exp": 2882986384, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "68": {"level": 68, "req_exp": 3205282408, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "69": {"level": 69, "req_exp": 3553485118, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "70": {"level": 70, "req_exp": 3929794414, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "71": {"level": 71, "req_exp": 4448803278, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "72": {"level": 72, "req_exp": 5009425048, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "73": {"level": 73, "req_exp": 5614631630, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "74": {"level": 74, "req_exp": 6267451223, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "75": {"level": 75, "req_exp": 6970968323, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "76": {"level": 76, "req_exp": 7728323719, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "77": {"level": 77, "req_exp": 8542714496, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "78": {"level": 78, "req_exp": 9417394035, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "79": {"level": 79, "req_exp": 10358436660, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "80": {"level": 80, "req_exp": 11372314092, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "81": {"level": 81, "req_exp": 12739286431, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "82": {"level": 82, "req_exp": 14213864997, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "83": {"level": 83, "req_exp": 15804594750, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "84": {"level": 84, "req_exp": 17520175450, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "85": {"level": 85, "req_exp": 19369461658, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "86": {"level": 86, "req_exp": 21361462733, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "87": {"level": 87, "req_exp": 23505342835, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "88": {"level": 88, "req_exp": 25810420924, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "89": {"level": 89, "req_exp": 28295087240, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "90": {"level": 90, "req_exp": 30976576184, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "91": {"level": 91, "req_exp": 34534008826, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "92": {"level": 92, "req_exp": 38376430046, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "93": {"level": 93, "req_exp": 42526111245, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "94": {"level": 94, "req_exp": 47034028422, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "95": {"level": 95, "req_exp": 51999625578, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "96": {"level": 96, "req_exp": 57572068712, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "97": {"level": 97, "req_exp": 63951499824, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "98": {"level": 98, "req_exp": 71438758915, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "99": {"level": 99, "req_exp": 80437891984, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}, "100": {"level": 100, "req_exp": 0, "rewards": [8000, 8100, 8200], "reward_counts": [1, 1, 1], "max_equip_tier": 6}};
-let userProfile = {
-  "nickname": "Lee",
-  "level": 33,
-  "combatPower": 26175,
-  "stageTid": 13208,
-  "currencies": {
-    "1000": {
-      "tid": 1000,
-      "count": "456458"
-    },
-    "2000": {
-      "tid": 2000,
-      "count": "9614051"
-    },
-    "3000": {
-      "tid": 3000,
-      "count": "0"
-    },
-    "3100": {
-      "tid": 3100,
-      "count": "200"
-    },
-    "4000": {
-      "tid": 4000,
-      "count": "800"
-    },
-    "4100": {
-      "tid": 4100,
-      "count": "4400"
-    },
-    "5000": {
-      "tid": 5000,
-      "count": "0"
-    },
-    "6000": {
-      "tid": 6000,
-      "count": "3"
-    },
-    "7000": {
-      "tid": 7000,
-      "count": "4000"
-    },
-    "8000": {
-      "tid": 8000,
-      "count": "1"
-    },
-    "8100": {
-      "tid": 8100,
-      "count": "0"
-    },
-    "8200": {
-      "tid": 8200,
-      "count": "1"
-    },
-    "9100": {
-      "tid": 9100,
-      "count": "706"
-    },
-    "9200": {
-      "tid": 9200,
-      "count": "150"
-    },
-    "9600": {
-      "tid": 9600,
-      "count": "810"
-    },
-    "11030": {
-      "tid": 11030,
-      "count": "5386"
-    }
-  },
-  "equippedGear": [
-    {
-      "id": "366034276139009",
-      "tid": 302002,
-      "location": 1,
-      "slot": 14,
-      "options": []
-    },
-    {
-      "id": "366054392021001",
-      "tid": 302011,
-      "location": 1,
-      "slot": 16,
-      "options": []
-    },
-    {
-      "id": "366081336229894",
-      "tid": 303002,
-      "location": 1,
-      "slot": 15,
-      "options": []
-    },
-    {
-      "id": "366128798973954",
-      "tid": 203014,
-      "location": 1,
-      "slot": 6,
-      "options": []
-    },
-    {
-      "id": "366236273967111",
-      "tid": 206024,
-      "location": 1,
-      "slot": 4,
-      "options": []
-    },
-    {
-      "id": "366515279069187",
-      "tid": 259024,
-      "location": 1,
-      "slot": 3,
-      "options": []
-    },
-    {
-      "id": "366616680562690",
-      "tid": 256024,
-      "location": 1,
-      "slot": 2,
-      "options": []
-    },
-    {
-      "id": "366959422226432",
-      "tid": 201033,
-      "location": 1,
-      "slot": 7,
-      "options": []
-    },
-    {
-      "id": "367314797133825",
-      "tid": 206024,
-      "location": 1,
-      "slot": 5,
-      "options": []
-    },
-    {
-      "id": "367315384336385",
-      "tid": 254024,
-      "location": 1,
-      "slot": 1,
-      "options": []
-    },
-    {
-      "id": "367363132784641",
-      "tid": 203033,
-      "location": 1,
-      "slot": 8,
-      "options": []
-    },
-    {
-      "id": "367501880442881",
-      "tid": 251034,
-      "location": 1,
-      "slot": 0,
-      "options": []
-    },
-    {
-      "id": "367527046266885",
-      "tid": 210033,
-      "location": 1,
-      "slot": 9,
-      "options": []
-    },
-    {
-      "id": "367534679900166",
-      "tid": 211033,
-      "location": 1,
-      "slot": 10,
-      "options": []
-    },
-    {
-      "id": "367558503546881",
-      "tid": 211033,
-      "location": 1,
-      "slot": 11,
-      "options": []
-    },
-    {
-      "id": "367563150835712",
-      "tid": 197301,
-      "location": 1,
-      "slot": 13,
-      "options": []
-    },
-    {
-      "id": "367581706436623",
-      "tid": 201043,
-      "location": 1,
-      "slot": 12,
-      "options": []
-    },
-    {
-      "id": "367582243307521",
-      "tid": 209021,
-      "location": 1,
-      "slot": 17,
-      "options": []
-    },
-    {
-      "id": "367582360748037",
-      "tid": 204043,
-      "location": 1,
-      "slot": 18,
-      "options": []
-    },
-    {
-      "id": "367582981505029",
-      "tid": 210032,
-      "location": 1,
-      "slot": 19,
-      "options": []
-    }
-  ],
-  "inventoryCount": 28,
-  "heroes": [
-    100,
-    101,
-    102,
-    103,
-    200,
-    201,
-    202,
-    300,
-    301,
-    302,
-    303,
-    203
-  ],
-  "trainingSkills": {
-    "11000": {
-      "tid": 11008,
-      "level": 8
-    },
-    "12000": {
-      "tid": 12008,
-      "level": 8
-    },
-    "13000": {
-      "tid": 13008,
-      "level": 8
-    },
-    "14000": {
-      "tid": 14005,
-      "level": 5
-    },
-    "15000": {
-      "tid": 15003,
-      "level": 3
-    },
-    "16000": {
-      "tid": 16009,
-      "level": 9
-    },
-    "17000": {
-      "tid": 17009,
-      "level": 9
-    },
-    "18000": {
-      "tid": 18008,
-      "level": 8
-    },
-    "19000": {
-      "tid": 19008,
-      "level": 8
-    },
-    "26000": {
-      "tid": 26007,
-      "level": 7
-    },
-    "27000": {
-      "tid": 27007,
-      "level": 7
-    },
-    "28000": {
-      "tid": 28007,
-      "level": 7
-    },
-    "29000": {
-      "tid": 29008,
-      "level": 8
-    },
-    "30000": {
-      "tid": 30007,
-      "level": 7
-    },
-    "31000": {
-      "tid": 31006,
-      "level": 6
-    },
-    "32000": {
-      "tid": 32006,
-      "level": 6
-    },
-    "33000": {
-      "tid": 33007,
-      "level": 7
-    },
-    "34000": {
-      "tid": 34006,
-      "level": 6
-    },
-    "35000": {
-      "tid": 35006,
-      "level": 6
-    },
-    "36000": {
-      "tid": 36007,
-      "level": 7
-    },
-    "37000": {
-      "tid": 37006,
-      "level": 6
-    },
-    "38000": {
-      "tid": 38003,
-      "level": 3
-    },
-    "39000": {
-      "tid": 39006,
-      "level": 6
-    },
-    "40000": {
-      "tid": 40006,
-      "level": 6
-    },
-    "41000": {
-      "tid": 41006,
-      "level": 6
-    },
-    "42000": {
-      "tid": 42004,
-      "level": 4
-    },
-    "43000": {
-      "tid": 43007,
-      "level": 7
-    },
-    "44000": {
-      "tid": 44008,
-      "level": 8
-    },
-    "49000": {
-      "tid": 49006,
-      "level": 6
-    },
-    "50000": {
-      "tid": 50001,
-      "level": 1
-    },
-    "54000": {
-      "tid": 54002,
-      "level": 2
-    },
-    "63000": {
-      "tid": 63006,
-      "level": 6
-    },
-    "64000": {
-      "tid": 64006,
-      "level": 6
-    },
-    "65000": {
-      "tid": 65006,
-      "level": 6
-    }
-  },
-  "skillTreeAllocations": {
-    "8101010": {
-      "tid": 8101010,
-      "level": 1
-    },
-    "8102010": {
-      "tid": 8102050,
-      "level": 5
-    },
-    "8103010": {
-      "tid": 8103020,
-      "level": 2
-    },
-    "8108010": {
-      "tid": 8108050,
-      "level": 5
-    },
-    "8109010": {
-      "tid": 8109020,
-      "level": 2
-    },
-    "8122010": {
-      "tid": 8122020,
-      "level": 2
-    },
-    "8123010": {
-      "tid": 8123020,
-      "level": 2
-    },
-    "8124010": {
-      "tid": 8124030,
-      "level": 3
-    },
-    "8129010": {
-      "tid": 8129060,
-      "level": 6
-    },
-    "8130010": {
-      "tid": 8130030,
-      "level": 3
-    },
-    "8201010": {
-      "tid": 8201010,
-      "level": 1
-    },
-    "8202010": {
-      "tid": 8202050,
-      "level": 5
-    },
-    "8203010": {
-      "tid": 8203030,
-      "level": 3
-    },
-    "8208010": {
-      "tid": 8208040,
-      "level": 4
-    },
-    "8209010": {
-      "tid": 8209050,
-      "level": 5
-    },
-    "8225010": {
-      "tid": 8225020,
-      "level": 2
-    },
-    "8226010": {
-      "tid": 8226030,
-      "level": 3
-    },
-    "8229010": {
-      "tid": 8229070,
-      "level": 7
-    },
-    "8230010": {
-      "tid": 8230020,
-      "level": 2
-    },
-    "8301010": {
-      "tid": 8301030,
-      "level": 3
-    },
-    "8302010": {
-      "tid": 8302050,
-      "level": 5
-    },
-    "8303010": {
-      "tid": 8303050,
-      "level": 5
-    },
-    "8308010": {
-      "tid": 8308030,
-      "level": 3
-    },
-    "8309010": {
-      "tid": 8309030,
-      "level": 3
-    },
-    "8324010": {
-      "tid": 8324020,
-      "level": 2
-    },
-    "8329010": {
-      "tid": 8329100,
-      "level": 10
-    }
-  },
-  "exportedAt": "2026-09-11T14:01:53.348Z",
-  "enrichedCurrencies": {
-    "gold": 456458,
-    "exp": 9614051,
-    "gem": 3,
-    "ether": 4000,
-    "warrior_pts": 1,
-    "archer_pts": 0,
-    "mage_pts": 1,
-    "unlock_stones": 800,
-    "honor": 4400
-  },
-  "equippedGearEnriched": [
-    {
-      "id": "366034276139009",
-      "tid": 302002,
-      "slot": 14,
-      "parts_type": 10,
-      "equip_type": 2,
-      "slot_name": "Nhẫn 2",
-      "name_vi": "Khuyên tai Hộ vệ Cũ",
-      "tier": 2,
-      "icon": "icon_acc_ComboEarrings"
-    },
-    {
-      "id": "366054392021001",
-      "tid": 302011,
-      "slot": 16,
-      "parts_type": 10,
-      "equip_type": 2,
-      "slot_name": "Nhẫn 2",
-      "name_vi": "Khuyên tai Hộ vệ Vững chắc",
-      "tier": 1,
-      "icon": "icon_acc_CounterEarrings"
-    },
-    {
-      "id": "366081336229894",
-      "tid": 303002,
-      "slot": 15,
-      "parts_type": 11,
-      "equip_type": 2,
-      "slot_name": "Bông tai 1",
-      "name_vi": "Dây chuyền Phước lành Cũ",
-      "tier": 2,
-      "icon": "icon_acc_ComboNecklace"
-    },
-    {
-      "id": "366128798973954",
-      "tid": 203014,
-      "slot": 6,
-      "parts_type": 1,
-      "equip_type": 1,
-      "slot_name": "Vũ khí chính",
-      "name_vi": "Ruby Staff",
-      "tier": 4,
-      "icon": "icon_weapon_rod_rubyrod"
-    },
-    {
-      "id": "366236273967111",
-      "tid": 206024,
-      "slot": 4,
-      "parts_type": 2,
-      "equip_type": 1,
-      "slot_name": "Vũ khí phụ",
-      "name_vi": "Sách Phép Trung Cấp",
-      "tier": 4,
-      "icon": "icon_SubWeapon_Grimoire_03"
-    },
-    {
-      "id": "366515279069187",
-      "tid": 259024,
-      "slot": 3,
-      "parts_type": 5,
-      "equip_type": 1,
-      "slot_name": "Găng tay",
-      "name_vi": "Găng Tay Pháp Sư Hoàng Gia",
-      "tier": 4,
-      "icon": "icon_armor_light_hand_healer"
-    },
-    {
-      "id": "366616680562690",
-      "tid": 256024,
-      "slot": 2,
-      "parts_type": 2,
-      "equip_type": 1,
-      "slot_name": "Vũ khí phụ",
-      "name_vi": "Sách Phép Tập Sự",
-      "tier": 4,
-      "icon": "icon_SubWeapon_Grimoire_14"
-    },
-    {
-      "id": "366959422226432",
-      "tid": 201033,
-      "slot": 7,
-      "parts_type": 1,
-      "equip_type": 1,
-      "slot_name": "Vũ khí chính",
-      "name_vi": "Sylphid",
-      "tier": 3,
-      "icon": "icon_weapon_rapier_imperialsylphid"
-    },
-    {
-      "id": "367314797133825",
-      "tid": 206024,
-      "slot": 5,
-      "parts_type": 2,
-      "equip_type": 1,
-      "slot_name": "Vũ khí phụ",
-      "name_vi": "Sách Phép Trung Cấp",
-      "tier": 4,
-      "icon": "icon_SubWeapon_Grimoire_03"
-    },
-    {
-      "id": "367315384336385",
-      "tid": 254024,
-      "slot": 1,
-      "parts_type": 2,
-      "equip_type": 1,
-      "slot_name": "Vũ khí phụ",
-      "name_vi": "Khiên Mana",
-      "tier": 4,
-      "icon": "icon_armor_heavy_shield_guardian_10"
-    },
-    {
-      "id": "367363132784641",
-      "tid": 203033,
-      "slot": 8,
-      "parts_type": 1,
-      "equip_type": 1,
-      "slot_name": "Vũ khí chính",
-      "name_vi": "Rapid Staff",
-      "tier": 3,
-      "icon": "icon_weapon_rod_lapidepulchra"
-    },
-    {
-      "id": "367501880442881",
-      "tid": 251034,
-      "slot": 0,
-      "parts_type": 1,
-      "equip_type": 1,
-      "slot_name": "Vũ khí chính",
-      "name_vi": "Kiếm Đao Phủ",
-      "tier": 4,
-      "icon": "icon_weapon_sword_bladeofkingtobe"
-    },
-    {
-      "id": "367527046266885",
-      "tid": 210033,
-      "slot": 9,
-      "parts_type": 6,
-      "equip_type": 1,
-      "slot_name": "Giày / Ủng",
-      "name_vi": "Ủng ánh sáng",
-      "tier": 3,
-      "icon": "icon_armor_light_shoes_pope"
-    },
-    {
-      "id": "367534679900166",
-      "tid": 211033,
-      "slot": 10,
-      "parts_type": 8,
-      "equip_type": 1,
-      "slot_name": "Giáp vai",
-      "name_vi": "Áo choàng ánh sáng",
-      "tier": 3,
-      "icon": "icon_armor_light_cloak_oldhabit_02"
-    },
-    {
-      "id": "367558503546881",
-      "tid": 211033,
-      "slot": 11,
-      "parts_type": 8,
-      "equip_type": 1,
-      "slot_name": "Giáp vai",
-      "name_vi": "Áo choàng ánh sáng",
-      "tier": 3,
-      "icon": "icon_armor_light_cloak_oldhabit_02"
-    },
-    {
-      "id": "367563150835712",
-      "tid": 197301,
-      "slot": 13,
-      "slot_name": "Dây chuyền / Phụ kiện",
-      "name_vi": "Ngọc Bí Thuật Cấp Thấp",
-      "tier": 1,
-      "icon": ""
-    },
-    {
-      "id": "367581706436623",
-      "tid": 201043,
-      "slot": 12,
-      "parts_type": 1,
-      "equip_type": 1,
-      "slot_name": "Vũ khí chính",
-      "name_vi": "Black Iron Sword",
-      "tier": 3,
-      "icon": "icon_weapon_greatsword_darksteelblade"
-    },
-    {
-      "id": "367582243307521",
-      "tid": 209021,
-      "slot": 17,
-      "parts_type": 5,
-      "equip_type": 1,
-      "slot_name": "Găng tay",
-      "name_vi": "Găng tay ranger",
-      "tier": 1,
-      "icon": "icon_armor_medium_hand_ranger"
-    },
-    {
-      "id": "367582360748037",
-      "tid": 204043,
-      "slot": 18,
-      "parts_type": 2,
-      "equip_type": 1,
-      "slot_name": "Vũ khí phụ",
-      "name_vi": "Warrior's Shield",
-      "tier": 3,
-      "icon": "icon_armor_heavy_shield_guardian"
-    },
-    {
-      "id": "367582981505029",
-      "tid": 210032,
-      "slot": 19,
-      "parts_type": 6,
-      "equip_type": 1,
-      "slot_name": "Giày / Ủng",
-      "name_vi": "Ủng ánh sáng",
-      "tier": 2,
-      "icon": "icon_armor_light_shoes_pope"
-    }
-  ],
-  "combatStats": {
-    "finalAttack": 1156.2,
-    "finalDefense": 1632.8,
-    "finalHp": 8273.2,
-    "attackSpeed": 115.55,
-    "criticalRate": 19.6,
-    "criticalDamage": 181.7,
-    "pveBonus": 17.5,
-    "damageBonus": 10.4,
-    "bossBonus": 10.5,
-    "normalAttackDps": 1982.4,
-    "skillsDps": 1432.8,
-    "realDps": 3415.1,
-    "bossDps": 2910.1
-  },
-  "clearStageTid": 13209,
-  "maxUnlockedStageTid": 13210,
-  "jewelsData": {
-    "jewels": [
-      {
-        "itemId": "366934692610054",
-        "itemTid": 198304,
-        "name": "Ngọc Kháng Phép Cao Cấp",
-        "rating": 4,
-        "icon": "Item_Jewel_of_C_02_01",
-        "location": 2,
-        "slot": 9,
-        "isLock": false
-      },
-      {
-        "itemId": "367880391245826",
-        "itemTid": 197203,
-        "name": "Ngọc Hoang Dã Cấp Cao",
-        "rating": 3,
-        "icon": "Item_Jewel_of_B_01",
-        "location": 2,
-        "slot": 10,
-        "isLock": false
-      },
-      {
-        "itemId": "367922283954180",
-        "itemTid": 196202,
-        "name": "Ngọc Sinh Mệnh Cấp Trung",
-        "rating": 2,
-        "icon": "Item_Armor_Stone_of_Name_B_01",
-        "location": 2,
-        "slot": 11,
-        "isLock": false
-      },
-      {
-        "itemId": "367959160274946",
-        "itemTid": 198202,
-        "name": "Ngọc Thép Cấp Trung",
-        "rating": 2,
-        "icon": "Item_Jewel_of_B_02_01",
-        "location": 2,
-        "slot": 12,
-        "isLock": false
-      },
-      {
-        "itemId": "368030933221376",
-        "itemTid": 196302,
-        "name": "Ngọc Kháng Tính Cấp Trung",
-        "rating": 2,
-        "icon": "Item_Armor_Stone_of_Name_C_01",
-        "location": 2,
-        "slot": 13,
-        "isLock": false
-      },
-      {
-        "itemId": "368045026082819",
-        "itemTid": 195303,
-        "name": "Ngọc Nguyên Tố Cấp Cao",
-        "rating": 3,
-        "icon": "Item_Stone_of_Name_C_01",
-        "location": 2,
-        "slot": 15,
-        "isLock": false
-      },
-      {
-        "itemId": "368066870018050",
-        "itemTid": 197102,
-        "name": "Ngọc Dũng Khí Cấp Trung",
-        "rating": 2,
-        "icon": "Item_Jewel_of_A_01",
-        "location": 2,
-        "slot": 14,
-        "isLock": false
-      }
-    ],
-    "storageUsed": 7,
-    "storageTotal": 42
-  }
-};
+let userProfile = {"nickname": "Tân Thủ (Chưa nạp save)", "level": 1, "combatPower": 100, "stageTid": 11101, "clearStageTid": 11101, "maxUnlockedStageTid": 11101, "farmStageId": 11101, "currencies": {"1000": {"count": 0}, "2000": {"count": 0}, "6000": {"count": 0}, "7000": {"count": 0}}, "expInfo": {"curExp": 0, "maxExp": 1000}, "equippedGear": {}, "equippedGearEnriched": [], "inventoryCount": 0, "heroes": [], "trainingSkills": {}, "skillTreeAllocations": {}, "liveSkillLevels": {}, "jewelsData": {"jewels": [], "storageUsed": 0, "storageTotal": 42}, "combatStats": {"finalAttack": 50, "finalAttackSpeed": 100, "finalCriticalRate": 5.0, "finalCriticalDamage": 150.0, "pveBonus": 0, "damageBonus": 0, "realDps": 50}};
 window.userProfile = userProfile;
 window.stageData = stageData;
 
@@ -14930,15 +14133,23 @@ function renderProfileGear() {
   }
 
   if (mainItems.length === 0) {
-    mainContainer.innerHTML = '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang bị chiến đấu.</div>';
+    mainContainer.innerHTML = '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang bị chiến đấu.<br><span style="font-size:12.5px; color:#58a6ff; margin-top:6px; display:inline-block; cursor:pointer;" onclick="openSaveLocatorModal()">👉 Bấm vào đây để <b>🔍 Định Vị & Nhập Save Game</b> của bạn!</span></div>';
+  } else {
+    if (mainItems.length === 0) {
+    mainContainer.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:28px 16px; color:#8b949e; background:#161b22; border-radius:8px; border:1px dashed #30363d;">Chưa có trang bị nào được nạp.<br><span style="font-size:12px; color:#58a6ff; margin-top:4px; display:inline-block;">👉 Hãy bấm nút <b>🔍 Định Vị & Nhập Save Game</b> ở trên để nạp dữ liệu nhân vật của bạn!</span></div>';
   } else {
     mainContainer.innerHTML = mainItems.map(g => renderGearCard(g, false)).join('');
+  }
   }
 
   if (accItems.length === 0) {
     accContainer.innerHTML = '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang sức.</div>';
   } else {
+    if (accItems.length === 0) {
+    accContainer.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px 16px; color:#8b949e; background:#161b22; border-radius:8px; border:1px dashed #30363d;">Chưa có trang sức nào được nạp.</div>';
+  } else {
     accContainer.innerHTML = accItems.map(g => renderGearCard(g, true)).join('');
+  }
   }
 }
 
@@ -15887,7 +15098,7 @@ renderTraining();
 renderEquip();
 renderStageTable();
 renderChat();
-startLiveSync(); // Automatically activate real-time polling loop!
+updateLiveSyncStatus('paused'); // Default paused on startup to preserve Level 1 until user requests sync
 </script>
 
 <!-- MODAL: ĐỊNH VỊ & NHẬP SAVE GAME -->
