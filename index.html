@@ -727,8 +727,16 @@ body {
       <div style="font-size:11px; color:#8b949e; margin-top:4px;" id="jewelStatBreakdown">🎒 Balo: 0 | 🏛️ Kho: 0 | ⚔️ Khảm: 0</div>
     </div>
     <div class="dps-card">
-      <div class="dps-card-title">📦 Dung Lượng Kho Đồ</div>
-      <div class="dps-card-val" id="jewelStatStorage" style="color:#58a6ff;">0 / 42 ô</div>
+      <div class="dps-card-title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>📦 Dung Lượng Kho Đồ</span>
+        <select id="selWarehouseTabs" onchange="setWarehouseTabsManual(this.value)" style="background:#161b22; color:#58a6ff; border:1px solid rgba(88,166,255,0.3); border-radius:4px; font-size:11px; padding:1px 4px; cursor:pointer;" title="Số kho đồ đã mở khóa">
+          <option value="auto">Tự động nhận diện</option>
+          <option value="1">1 Kho (42 ô)</option>
+          <option value="2">2 Kho (84 ô)</option>
+          <option value="3">3 Kho (126 ô)</option>
+        </select>
+      </div>
+      <div class="dps-card-val" id="jewelStatStorage" style="color:#58a6ff;">0 / 42 ô (1 Kho)</div>
       <div style="font-size:11px; color:#7ee787; margin-top:4px;" id="jewelStatStorageAvail">Trống 0 ô nhận đồ</div>
     </div>
     <div class="dps-card">
@@ -781,6 +789,20 @@ body {
           </div>
           <div style="font-size:11.5px; color:#8b949e;">Tự động đưa 3 trang sức cùng Tier 3 trong Balo và Kho đồ (Kho 1, 2, 3) vào lò rèn để nâng lên Tier 4.</div>
         </div>
+      </div>
+
+      <!-- TIER 3 SAME LEVEL ONLY CHECKBOX OPTION -->
+      <div style="background:rgba(88, 166, 255, 0.08); border:1px solid rgba(88, 166, 255, 0.25); border-radius:8px; padding:10px 14px; margin-top:10px; margin-bottom:12px; display:flex; align-items:flex-start; gap:10px; cursor:pointer;" onclick="toggleFuseT3SameLevelOnly()">
+        <input type="checkbox" id="chkFuseT3SameLevelOnly" style="cursor:pointer; width:17px; height:17px; margin-top:2px; accent-color:#58a6ff;" onclick="event.stopPropagation(); toggleFuseT3SameLevelOnly();">
+        <label for="chkFuseT3SameLevelOnly" style="cursor:pointer; flex:1; margin:0; user-select:none;">
+          <div style="font-weight:bold; font-size:13px; color:#58a6ff; display:flex; align-items:center; gap:6px;">
+            <span>🔒 Chỉ ghép các món CÙNG CẤP ĐỘ (Level)</span>
+            <span style="font-size:10.5px; background:rgba(88, 166, 255, 0.2); color:#79c0ff; padding:1px 6px; border-radius:10px;">Khuyên Dùng</span>
+          </div>
+          <div style="font-size:11.5px; color:#8b949e; margin-top:3px; line-height:1.4;">
+            Bắt buộc 6 trang bị (hoặc 3 trang sức) phải cùng cấp yêu cầu (ví dụ cùng Lv 50, hoặc cùng Lv 40). Ngăn chặn tuyệt đối việc bị trộn món Lv 20 tạo ra đồ Đỏ cấp thấp.
+          </div>
+        </label>
       </div>
 
       <div class="jewel-switch-wrap" onclick="toggleIncludeStorageJewels()">
@@ -12863,11 +12885,77 @@ function sendEvaluatePoll() {
       };
 
       try {
-        let sWorkshop;
+        let sWorkshop, sStorage, sEquip;
         for (let [k, v] of nn.services._mapService.entries()) {
           const name = k.name || k.toString();
           if (name === 'ServiceWorkshop') sWorkshop = v;
+          if (name === 'ServiceStorage') sStorage = v;
+          if (name === 'ServiceEquip') sEquip = v;
         }
+
+        const resolveItemLevel = (itemTid, itemId) => {
+          try {
+            if (sEquip && typeof sEquip.getEquipLimitLevel === 'function') {
+              const lv = sEquip.getEquipLimitLevel(itemTid, itemId);
+              if (lv > 0) return lv;
+            }
+          } catch(e) {}
+          try {
+            const dbEq = nn.db.equip.get(itemTid);
+            if (dbEq) {
+              if (dbEq.BaseLimitLevel !== undefined) return dbEq.BaseLimitLevel;
+              if (dbEq.ReqUserLevel !== undefined) return dbEq.ReqUserLevel;
+              if (dbEq.LimitLevel !== undefined) return dbEq.LimitLevel;
+              if (dbEq.EquipLevel !== undefined) return dbEq.EquipLevel;
+              if (dbEq.LevelLimit !== undefined) return dbEq.LevelLimit;
+            }
+          } catch(e) {}
+          try {
+            if (typeof equipments !== 'undefined' && Array.isArray(equipments)) {
+              const eq = equipments.find(e => e.id === itemTid);
+              if (eq && eq.level_req !== undefined) return eq.level_req;
+            }
+          } catch(e) {}
+          return 1;
+        };
+
+        const calcTotalStorage = (items, slotPerTab) => {
+          slotPerTab = slotPerTab || nn.db.config?.gen?.Storage_Slot_Cnt || 42;
+          let detectedTabs = 1;
+          if (cfg && cfg.manualWarehouseTabs && cfg.manualWarehouseTabs !== 'auto') {
+            const p = parseInt(cfg.manualWarehouseTabs, 10);
+            if (!isNaN(p) && p >= 1) detectedTabs = p;
+          }
+          if (cfg && cfg.savedWarehouseTabs && cfg.savedWarehouseTabs > detectedTabs) {
+            detectedTabs = cfg.savedWarehouseTabs;
+          }
+          try {
+            let sCount = 0;
+            if (sStorage) {
+              if (typeof sStorage.getStorageCount === 'function') sCount = sStorage.getStorageCount();
+              else if (typeof sStorage.getWarehouseCount === 'function') sCount = sStorage.getWarehouseCount();
+              else if (sStorage.storageCount) sCount = sStorage.storageCount;
+              else if (sStorage._storageCount) sCount = sStorage._storageCount;
+            }
+            if (!sCount && userC && userC._user) {
+              sCount = userC._user._storageCount || userC._user._warehouseCount || userC._user._storageTabCount || 0;
+            }
+            if (!sCount && itemC) {
+              sCount = itemC._storageCount || itemC._warehouseCount || itemC._storageTabCount || 0;
+            }
+            if (sCount > detectedTabs) detectedTabs = sCount;
+          } catch(e) {}
+
+          const storageItems = (items || []).filter(i => i.location === 2);
+          for (let it of storageItems) {
+            const s = it.slotIdx !== undefined ? it.slotIdx : (it.slot !== undefined ? it.slot : (it._slotIdx !== undefined ? it._slotIdx : -1));
+            if (s >= 0) {
+              const tab = Math.floor(s / slotPerTab) + 1;
+              if (tab > detectedTabs) detectedTabs = tab;
+            }
+          }
+          return detectedTabs * slotPerTab;
+        };
 
         // Execute pending action if requested
         manualEquipWeapons = false;
@@ -12885,19 +12973,43 @@ function sendEvaluatePoll() {
             if (cmd.fuseGear) {
               sWorkshop.setFusionContentType(1); // 1 = Gear
               sWorkshop.setAutoRegisterRating('Fusion', 3); // Tier 3
+              const isSameLv = cmd.sameLevelOnly !== undefined ? cmd.sameLevelOnly : (cfg && cfg.sameLevelOnly);
               let loopGuard = 0;
               while (loopGuard < 10) {
                 // Collect candidate Tier 3 items from Balo and Kho 1, 2, 3
-                const candidates = sWorkshop.collectAutoRegisterCandidates(
+                const rawCandidates = sWorkshop.collectAutoRegisterCandidates(
                   'Fusion',
                   (itemTid, itemId) => !sWorkshop.isFusionStaged(itemId) && sWorkshop.canStageFusionItem(itemTid, itemId),
                   true,
                   { rating: 3 }
                 ).filter(c => c.ratingType === 3);
 
-                if (candidates.length < 6) break;
+                if (rawCandidates.length < 6) break;
 
+                let candidates = rawCandidates;
                 let targetTable = null;
+
+                if (isSameLv) {
+                  const byLevel = new Map();
+                  for (let c of rawCandidates) {
+                    const lv = resolveItemLevel(c.itemTid, c.itemId);
+                    c._itemLevel = lv;
+                    if (!byLevel.has(lv)) byLevel.set(lv, []);
+                    byLevel.get(lv).push(c);
+                  }
+                  let selectedGroup = null;
+                  const sortedLevels = Array.from(byLevel.keys()).sort((a, b) => b - a);
+                  for (let lv of sortedLevels) {
+                    const grp = byLevel.get(lv);
+                    if (grp.length >= 6) {
+                      selectedGroup = grp;
+                      break;
+                    }
+                  }
+                  if (!selectedGroup) break; // No group has 6 items of the SAME level! Stop fusing!
+                  candidates = selectedGroup.slice(0, 6);
+                }
+
                 for (let c of candidates) {
                   const ft = sWorkshop.resolveFusionTableByItem(c.itemTid, c.itemId);
                   if (ft && ft.MaterialRating === 3) {
@@ -12909,8 +13021,10 @@ function sendEvaluatePoll() {
                   sWorkshop.clearFusionStaging();
                   sWorkshop.lockFusionTable(targetTable);
                   sWorkshop.fillFusionSlots(targetTable, candidates);
-                } else {
+                } else if (!isSameLv) {
                   sWorkshop.autoRegisterFusion();
+                } else {
+                  break;
                 }
 
                 if (!sWorkshop.isFusionStagingFull()) {
@@ -12935,19 +13049,43 @@ function sendEvaluatePoll() {
             if (cmd.fuseAcc) {
               sWorkshop.setFusionContentType(2); // 2 = Accessory / Trang sức
               sWorkshop.setAutoRegisterRating('Fusion', 3); // Tier 3
+              const isSameLv = cmd.sameLevelOnly !== undefined ? cmd.sameLevelOnly : (cfg && cfg.sameLevelOnly);
               let loopGuard = 0;
               while (loopGuard < 10) {
                 // Collect candidate Tier 3 accessories from Balo and Kho 1, 2, 3
-                const candidates = sWorkshop.collectAutoRegisterCandidates(
+                const rawCandidates = sWorkshop.collectAutoRegisterCandidates(
                   'Fusion',
                   (itemTid, itemId) => !sWorkshop.isFusionStaged(itemId) && sWorkshop.canStageFusionItem(itemTid, itemId),
                   true,
                   { rating: 3 }
                 ).filter(c => c.ratingType === 3);
 
-                if (candidates.length < 3) break;
+                if (rawCandidates.length < 3) break;
 
+                let candidates = rawCandidates;
                 let targetTable = null;
+
+                if (isSameLv) {
+                  const byLevel = new Map();
+                  for (let c of rawCandidates) {
+                    const lv = resolveItemLevel(c.itemTid, c.itemId);
+                    c._itemLevel = lv;
+                    if (!byLevel.has(lv)) byLevel.set(lv, []);
+                    byLevel.get(lv).push(c);
+                  }
+                  let selectedGroup = null;
+                  const sortedLevels = Array.from(byLevel.keys()).sort((a, b) => b - a);
+                  for (let lv of sortedLevels) {
+                    const grp = byLevel.get(lv);
+                    if (grp.length >= 3) {
+                      selectedGroup = grp;
+                      break;
+                    }
+                  }
+                  if (!selectedGroup) break; // No group has 3 accessories of the SAME level! Stop fusing!
+                  candidates = selectedGroup.slice(0, 3);
+                }
+
                 for (let c of candidates) {
                   const ft = sWorkshop.resolveFusionTableByItem(c.itemTid, c.itemId);
                   if (ft && ft.MaterialRating === 3) {
@@ -12959,8 +13097,10 @@ function sendEvaluatePoll() {
                   sWorkshop.clearFusionStaging();
                   sWorkshop.lockFusionTable(targetTable);
                   sWorkshop.fillFusionSlots(targetTable, candidates);
-                } else {
+                } else if (!isSameLv) {
                   sWorkshop.autoRegisterFusion();
+                } else {
+                  break;
                 }
 
                 if (!sWorkshop.isFusionStagingFull()) {
@@ -13021,7 +13161,7 @@ function sendEvaluatePoll() {
               }
             }
             if (toDeposit.length > 0) {
-              const totalStorage = nn.db.config?.gen?.Storage_Slot_Cnt || 42;
+              const totalStorage = calcTotalStorage(allItems);
               const usedStorage = allItems.filter(i => i.location === 2).length; // 2 = Storage (Kho)
               const avail = Math.max(0, totalStorage - usedStorage);
               const chunk = toDeposit.slice(0, avail);
@@ -13056,7 +13196,7 @@ function sendEvaluatePoll() {
               }
             }
             if (toDeposit.length > 0) {
-              const totalStorage = nn.db.config?.gen?.Storage_Slot_Cnt || 42;
+              const totalStorage = calcTotalStorage(allItems);
               const usedStorage = allItems.filter(i => i.location === 2).length;
               const avail = Math.max(0, totalStorage - usedStorage);
               const chunk = toDeposit.slice(0, avail);
@@ -13100,7 +13240,7 @@ function sendEvaluatePoll() {
 
         // Query jewels & storage state
         const allNotStack = nn.net.data.item.getAllItemNotStack();
-        jewelData.storageTotal = nn.db.config?.gen?.Storage_Slot_Cnt || 42;
+        jewelData.storageTotal = calcTotalStorage(allNotStack);
         jewelData.storageUsed = allNotStack.filter(i => i.location === 2).length; // 2 = Kho đồ
         jewelData.includeStorage = sWorkshop ? sWorkshop.getAutoRegisterIncludeStorage('Fusion') : false;
 
@@ -13109,18 +13249,24 @@ function sendEvaluatePoll() {
         let t3GearStorage = 0;
         let t3AccInv = 0;
         let t3AccStorage = 0;
+        const t3GearByLevel = {};
+        const t3AccByLevel = {};
+
         for (let it of allNotStack) {
           if (!it.isLock && (it.location === 1 || it.location === 2)) {
             const dbEquip = nn.db.equip.get(it.itemTid);
             if (dbEquip && dbEquip.RatingType === 3) {
               const isGear = dbEquip.EquipType === 1 || (dbEquip.PartsType && dbEquip.PartsType <= 8);
               const isAcc = dbEquip.EquipType === 2 || (dbEquip.PartsType && dbEquip.PartsType >= 9);
+              const itemLv = resolveItemLevel(it.itemTid, it.itemId);
               if (isGear) {
                 if (it.location === 1) t3GearInv++;
                 else if (it.location === 2) t3GearStorage++;
+                t3GearByLevel[itemLv] = (t3GearByLevel[itemLv] || 0) + 1;
               } else if (isAcc) {
                 if (it.location === 1) t3AccInv++;
                 else if (it.location === 2) t3AccStorage++;
+                t3AccByLevel[itemLv] = (t3AccByLevel[itemLv] || 0) + 1;
               }
             }
           }
@@ -13128,10 +13274,14 @@ function sendEvaluatePoll() {
         jewelData.t3GearCount = t3GearInv + t3GearStorage;
         jewelData.t3GearInvCount = t3GearInv;
         jewelData.t3GearStorageCount = t3GearStorage;
+        jewelData.t3GearMaxSameLevel = Math.max(0, ...Object.values(t3GearByLevel));
+        jewelData.t3GearReadySameLevel = Object.values(t3GearByLevel).reduce((acc, cnt) => acc + Math.floor(cnt / 6), 0);
 
         jewelData.t3AccCount = t3AccInv + t3AccStorage;
         jewelData.t3AccInvCount = t3AccInv;
         jewelData.t3AccStorageCount = t3AccStorage;
+        jewelData.t3AccMaxSameLevel = Math.max(0, ...Object.values(t3AccByLevel));
+        jewelData.t3AccReadySameLevel = Object.values(t3AccByLevel).reduce((acc, cnt) => acc + Math.floor(cnt / 3), 0);
 
         for (let it of allNotStack) {
           const dbInfo = nn.db.item.get(it.itemTid);
@@ -13305,7 +13455,13 @@ function sendEvaluatePoll() {
     } catch(err) {
       return JSON.stringify({ error: err.toString() });
     }
-  }).toString() + ')(' + JSON.stringify({ autoEquipWeapon: isAutoEquipWeaponOnClassSwitchActive, autoEquipSkill: isAutoEquipSkillOnClassSwitchActive }) + ')';
+  }).toString() + ')(' + JSON.stringify({
+    autoEquipWeapon: isAutoEquipWeaponOnClassSwitchActive,
+    autoEquipSkill: isAutoEquipSkillOnClassSwitchActive,
+    sameLevelOnly: isFuseT3SameLevelOnlyActive,
+    manualWarehouseTabs: localStorage.getItem('genesis_warehouse_tabs_mode') || 'auto',
+    savedWarehouseTabs: parseInt(localStorage.getItem('genesis_detected_warehouse_tabs') || '1', 10)
+  }) + ')';
 
   // 32-bit integer message id required by Puerts Inspector C++ parser
   const msgId = (pollMsgSeq++ % 100000) + 1;
@@ -13398,6 +13554,15 @@ function applyLiveGameData(data) {
     window.liveJewelData = data.jewelsData;
     liveJewelData = data.jewelsData;
 
+    // Track detected warehouse tabs in localStorage
+    if (data.jewelsData.storageTotal > 0) {
+      const curTabs = Math.round(data.jewelsData.storageTotal / 42);
+      const prevTabs = parseInt(localStorage.getItem('genesis_detected_warehouse_tabs') || '1', 10);
+      if (curTabs > prevTabs) {
+        localStorage.setItem('genesis_detected_warehouse_tabs', curTabs);
+      }
+    }
+
     // Update T3 gear & jewelry counter badges if present (including Kho 1, 2, 3)
     updateT3Counts(
       data.jewelsData.t3GearCount,
@@ -13405,16 +13570,21 @@ function applyLiveGameData(data) {
       data.jewelsData.t3GearInvCount,
       data.jewelsData.t3GearStorageCount,
       data.jewelsData.t3AccInvCount,
-      data.jewelsData.t3AccStorageCount
+      data.jewelsData.t3AccStorageCount,
+      data.jewelsData.t3GearReadySameLevel,
+      data.jewelsData.t3AccReadySameLevel
     );
 
     // Auto-fuse T3 checks
-    if ((isAutoFuseGearT3Active && data.jewelsData.t3GearCount >= 6) ||
-        (isAutoFuseAccT3Active && data.jewelsData.t3AccCount >= 3)) {
+    const gearReady = isFuseT3SameLevelOnlyActive ? ((data.jewelsData.t3GearMaxSameLevel || 0) >= 6) : (data.jewelsData.t3GearCount >= 6);
+    const accReady = isFuseT3SameLevelOnlyActive ? ((data.jewelsData.t3AccMaxSameLevel || 0) >= 3) : (data.jewelsData.t3AccCount >= 3);
+
+    if ((isAutoFuseGearT3Active && gearReady) || (isAutoFuseAccT3Active && accReady)) {
       queueJewelCmd({
         action: 'fuseT3',
-        fuseGear: isAutoFuseGearT3Active && data.jewelsData.t3GearCount >= 6,
-        fuseAcc: isAutoFuseAccT3Active && data.jewelsData.t3AccCount >= 3
+        fuseGear: isAutoFuseGearT3Active && gearReady,
+        fuseAcc: isAutoFuseAccT3Active && accReady,
+        sameLevelOnly: isFuseT3SameLevelOnlyActive
       });
     }
 
@@ -15424,9 +15594,10 @@ function renderJewelLogs() {
 }
 
 
-/* TIER 3 AUTO FUSE LOGIC (EQUIP: 6, ACC: 3) */
+/* TIER 3 AUTO FUSE LOGIC (EQUIP: 6, ACC: 3) & SAME-LEVEL RESTRICTION */
 let isAutoFuseGearT3Active = localStorage.getItem('genesis_auto_fuse_gear_t3') === 'true';
 let isAutoFuseAccT3Active = localStorage.getItem('genesis_auto_fuse_acc_t3') === 'true';
+let isFuseT3SameLevelOnlyActive = localStorage.getItem('genesis_fuse_t3_same_level_only') !== 'false'; // Default TRUE
 
 function toggleAutoFuseGearT3() {
   isAutoFuseGearT3Active = !isAutoFuseGearT3Active;
@@ -15442,31 +15613,55 @@ function toggleAutoFuseAccT3() {
   addJewelLog(isAutoFuseAccT3Active ? '🟢 Đã BẬT tự động ghép Trang Sức Tier 3 khi đủ 3 món.' : '🔴 Đã TẮT tự động ghép Trang Sức Tier 3.', isAutoFuseAccT3Active ? 'success' : 'info');
 }
 
+function toggleFuseT3SameLevelOnly() {
+  isFuseT3SameLevelOnlyActive = !isFuseT3SameLevelOnlyActive;
+  localStorage.setItem('genesis_fuse_t3_same_level_only', isFuseT3SameLevelOnlyActive);
+  updateT3Switches();
+  addJewelLog(isFuseT3SameLevelOnlyActive ? '🔒 Đã BẬT: Chỉ ghép trang bị/trang sức Tier 3 CÙNG CẤP ĐỘ (Level).' : '⚠️ Đã TẮT: Ghép trang bị/trang sức Tier 3 mọi cấp độ (có thể trộn cấp).', isFuseT3SameLevelOnlyActive ? 'success' : 'info');
+  if (liveJewelData) {
+    updateT3Counts(
+      liveJewelData.t3GearCount,
+      liveJewelData.t3AccCount,
+      liveJewelData.t3GearInvCount,
+      liveJewelData.t3GearStorageCount,
+      liveJewelData.t3AccInvCount,
+      liveJewelData.t3AccStorageCount,
+      liveJewelData.t3GearReadySameLevel,
+      liveJewelData.t3AccReadySameLevel
+    );
+  }
+}
+
 function updateT3Switches() {
   const sGear = document.getElementById('switchAutoFuseGearT3');
   const sAcc = document.getElementById('switchAutoFuseAccT3');
+  const chkSameLv = document.getElementById('chkFuseT3SameLevelOnly');
   if (sGear) sGear.className = 'jewel-switch ' + (isAutoFuseGearT3Active ? 'active' : '');
   if (sAcc) sAcc.className = 'jewel-switch ' + (isAutoFuseAccT3Active ? 'active' : '');
+  if (chkSameLv) chkSameLv.checked = isFuseT3SameLevelOnlyActive;
 }
 
-function updateT3Counts(gearCnt, accCnt, gearInv, gearStorage, accInv, accStorage) {
+function updateT3Counts(gearCnt, accCnt, gearInv, gearStorage, accInv, accStorage, gearReadySame, accReadySame) {
   const gEl = document.getElementById('t3GearCountVal');
   const aEl = document.getElementById('t3AccCountVal');
+  const sameLv = isFuseT3SameLevelOnlyActive;
   if (gEl && gearCnt !== undefined) {
-    const ready = Math.floor(gearCnt / 6);
+    const ready = sameLv ? (gearReadySame !== undefined ? gearReadySame : 0) : Math.floor(gearCnt / 6);
     let sub = '';
     if (gearInv !== undefined && gearStorage !== undefined) {
       sub = ' <span style="font-size:11px; color:#8b949e; font-weight:normal;">[Balo: ' + gearInv + ' | Kho: ' + gearStorage + ']</span>';
     }
-    gEl.innerHTML = gearCnt + ' món' + sub + ' <span style="font-size:12px; color:' + (ready > 0 ? '#7ee787' : '#8b949e') + '">(' + ready + ' lượt ghép)</span>';
+    const readyLabel = sameLv ? (ready + ' lượt cùng cấp') : (ready + ' lượt');
+    gEl.innerHTML = gearCnt + ' món' + sub + ' <span style="font-size:12px; color:' + (ready > 0 ? '#7ee787' : '#8b949e') + '">(' + readyLabel + ')</span>';
   }
   if (aEl && accCnt !== undefined) {
-    const ready = Math.floor(accCnt / 3);
+    const ready = sameLv ? (accReadySame !== undefined ? accReadySame : 0) : Math.floor(accCnt / 3);
     let sub = '';
     if (accInv !== undefined && accStorage !== undefined) {
       sub = ' <span style="font-size:11px; color:#8b949e; font-weight:normal;">[Balo: ' + accInv + ' | Kho: ' + accStorage + ']</span>';
     }
-    aEl.innerHTML = accCnt + ' món' + sub + ' <span style="font-size:12px; color:' + (ready > 0 ? '#7ee787' : '#8b949e') + '">(' + ready + ' lượt ghép)</span>';
+    const readyLabel = sameLv ? (ready + ' lượt cùng cấp') : (ready + ' lượt');
+    aEl.innerHTML = accCnt + ' món' + sub + ' <span style="font-size:12px; color:' + (ready > 0 ? '#7ee787' : '#8b949e') + '">(' + readyLabel + ')</span>';
   }
 }
 
@@ -15474,9 +15669,59 @@ function triggerManualT3Fuse() {
   queueJewelCmd({
     action: 'fuseT3',
     fuseGear: true,
-    fuseAcc: true
+    fuseAcc: true,
+    sameLevelOnly: isFuseT3SameLevelOnlyActive
   });
-  addJewelLog('🔨 Đã gửi lệnh yêu cầu Lò Rèn ghép ngay Trang Bị & Trang Sức Tier 3.', 'info');
+  addJewelLog('🔨 Đã gửi lệnh yêu cầu Lò Rèn ghép ngay Trang Bị & Trang Sức Tier 3' + (isFuseT3SameLevelOnlyActive ? ' (chỉ ghép cùng cấp độ)' : '') + '.', 'info');
+}
+
+/* STORAGE CAPACITY & WAREHOUSE MANAGEMENT */
+function resolveTotalStorage(allItems, slotPerTab, manualTabs) {
+  slotPerTab = slotPerTab || 42;
+  let detectedTabs = 1;
+
+  const savedMode = manualTabs || localStorage.getItem('genesis_warehouse_tabs_mode') || 'auto';
+  if (savedMode !== 'auto') {
+    const parsed = parseInt(savedMode, 10);
+    if (!isNaN(parsed) && parsed > 0) detectedTabs = parsed;
+  }
+
+  const savedDetected = parseInt(localStorage.getItem('genesis_detected_warehouse_tabs') || '1', 10);
+  if (!isNaN(savedDetected) && savedDetected > detectedTabs) {
+    detectedTabs = savedDetected;
+  }
+
+  const storageItems = (allItems || []).filter(i => i.location === 2);
+  for (let it of storageItems) {
+    const s = it.slotIdx !== undefined ? it.slotIdx : (it.slot !== undefined ? it.slot : (it._slotIdx !== undefined ? it._slotIdx : -1));
+    if (s >= 0) {
+      const tab = Math.floor(s / slotPerTab) + 1;
+      if (tab > detectedTabs) detectedTabs = tab;
+    }
+  }
+
+  try {
+    const prevMax = parseInt(localStorage.getItem('genesis_detected_warehouse_tabs') || '1', 10);
+    if (detectedTabs > prevMax) {
+      localStorage.setItem('genesis_detected_warehouse_tabs', detectedTabs);
+    }
+  } catch(e) {}
+
+  return detectedTabs * slotPerTab;
+}
+
+function setWarehouseTabsManual(val) {
+  localStorage.setItem('genesis_warehouse_tabs_mode', val);
+  if (val !== 'auto') {
+    const tabs = parseInt(val, 10);
+    localStorage.setItem('genesis_detected_warehouse_tabs', tabs);
+    if (liveJewelData) liveJewelData.storageTotal = tabs * 42;
+  } else {
+    const detected = parseInt(localStorage.getItem('genesis_detected_warehouse_tabs') || '1', 10);
+    if (liveJewelData) liveJewelData.storageTotal = detected * 42;
+  }
+  addJewelLog('📦 Đã thiết lập dung lượng kho đồ: ' + (val === 'auto' ? 'Tự động nhận diện' : val + ' Kho (' + (parseInt(val)*42) + ' ô)'), 'info');
+  renderJewelSection();
 }
 
 /* CLASS SWITCH AUTO EQUIP WEAPON & SKILLS */
@@ -15546,6 +15791,7 @@ function updateJewelSwitches() {
   const sStorage = document.getElementById('switchIncludeStorage');
   const sDeposit = document.getElementById('switchAutoDeposit');
   const sStatus = document.getElementById('jewelStatAutoStatus');
+  const selTabs = document.getElementById('selWarehouseTabs');
 
   if (sFuse) sFuse.className = 'jewel-switch ' + (isAutoFuseJewelActive ? 'active' : '');
   if (sStorage) sStorage.className = 'jewel-switch ' + (isIncludeStorageJewelActive ? 'active' : '');
@@ -15553,6 +15799,9 @@ function updateJewelSwitches() {
   if (sStatus) {
     sStatus.innerText = isAutoFuseJewelActive ? 'Đang hoạt động' : 'Tạm dừng';
     sStatus.style.color = isAutoFuseJewelActive ? '#7ee787' : '#8b949e';
+  }
+  if (selTabs) {
+    selTabs.value = localStorage.getItem('genesis_warehouse_tabs_mode') || 'auto';
   }
 }
 
@@ -15668,11 +15917,16 @@ function renderJewelSection() {
   }
 
   const statStorage = document.getElementById('jewelStatStorage');
-  if (statStorage) statStorage.innerText = liveJewelData.storageUsed + ' / ' + liveJewelData.storageTotal + ' ô';
+  if (statStorage) {
+    const totalSlots = liveJewelData.storageTotal || 42;
+    const tabCount = Math.max(1, Math.round(totalSlots / 42));
+    statStorage.innerText = (liveJewelData.storageUsed || 0) + ' / ' + totalSlots + ' ô (' + tabCount + ' Kho)';
+  }
 
   const statStorageAvail = document.getElementById('jewelStatStorageAvail');
   if (statStorageAvail) {
-    const avail = Math.max(0, liveJewelData.storageTotal - liveJewelData.storageUsed);
+    const totalSlots = liveJewelData.storageTotal || 42;
+    const avail = Math.max(0, totalSlots - (liveJewelData.storageUsed || 0));
     statStorageAvail.innerText = 'Trống ' + avail + ' ô nhận đồ';
   }
 
