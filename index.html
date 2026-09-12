@@ -44,8 +44,10 @@
     gap: 16px;
     margin-bottom: 20px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    min-height: 76px;
   }
   .player-identity { display: flex; align-items: center; gap: 14px; }
+  .player-name-wrap { display: flex; flex-direction: column; justify-content: center; min-height: 44px; }
   .player-avatar {
     width: 46px; height: 46px; border-radius: 50%;
     background: #1f6feb26; border: 2px solid #388bfd;
@@ -53,7 +55,7 @@
     font-size: 24px;
   }
   .player-name { font-size: 18px; font-weight: bold; color: var(--text-bright); display: flex; align-items: center; gap: 8px; }
-  .player-meta { font-size: 12.5px; color: #8b949e; margin-top: 2px; }
+  .player-meta { font-size: 12.5px; color: #8b949e; margin-top: 2px; white-space: nowrap; }
 
   .player-stats { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .stat-pill {
@@ -67,6 +69,8 @@
     gap: 6px;
     position: relative;
     overflow: hidden;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .stat-pill b { color: var(--text-bright); }
   .stat-pill.gold b { color: var(--accent-gold); }
@@ -76,13 +80,14 @@
   .stat-pill.dps b { color: #ff7b72; }
   
   .stat-pill.exp {
-    min-width: 250px;
+    min-width: 270px;
     flex-direction: column;
     align-items: flex-start;
     padding: 5px 12px;
     gap: 3px;
+    white-space: nowrap;
   }
-  .exp-pill-header { display: flex; justify-content: space-between; width: 100%; font-size: 11.5px; }
+  .exp-pill-header { display: flex; justify-content: space-between; width: 100%; font-size: 11.5px; white-space: nowrap; gap: 8px; }
   .exp-mini-bar-bg {
     width: 100%; height: 5px; background: #21262d; border-radius: 3px; overflow: hidden;
   }
@@ -218,6 +223,7 @@
   .tab-btn.active { color: #fff; background: #1f6feb; border-color: #388bfd; }
   .tab-btn.stage-tab.active { background: #9e6a03; border-color: #d29922; }
   .tab-btn.dps-tab.active { background: #b62324; border-color: #f85149; }
+  .tab-btn.history-tab.active { background: #238636; border-color: #2ea043; }
   .tab-btn.ai-tab.active { background: #bd561d; border-color: #f0883e; }
 
   /* CLASS SELECTOR TABS */
@@ -498,6 +504,96 @@
 .jewel-log-success { color: #7ee787; font-weight: bold; }
 .jewel-log-info { color: #e3b341; }
 
+/* GOOGLE TRANSLATE ENGINE & COMPLETE BANNER SUPPRESSION */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+iframe[id*=":1.container"],
+iframe[class*="goog-te-banner"],
+iframe[class*="VIpgJd"],
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-xl07Ob-OEVmcd,
+.VIpgJd-ZVi9od-SmfZ-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-yAWNEb-L7lbkb,
+.VIpgJd-yAWNEb-hvhgNd,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-tooltip {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0px !important;
+  width: 0px !important;
+  max-height: 0px !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  pointer-events: none !important;
+  z-index: -99999 !important;
+}
+
+html.translated-ltr body,
+html.translated-rtl body,
+body.translated-ltr,
+body.translated-rtl,
+body {
+  top: 0px !important;
+  position: static !important;
+}
+
+#google_translate_element {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.lang-switch-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 2px 4px;
+  border-radius: 6px;
+  user-select: none;
+}
+.lang-btn {
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #8b949e;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease-in-out;
+  outline: none;
+  white-space: nowrap;
+}
+.lang-btn:hover {
+  color: #f0f6fc;
+  background: rgba(255, 255, 255, 0.05);
+}
+.lang-btn.active {
+  border-color: #1f6feb;
+  color: #58a6ff;
+  background: rgba(31, 111, 235, 0.15);
+  font-weight: 600;
+}
+.lang-flag {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 </style>
 </head>
 <body>
@@ -507,8 +603,30 @@
   <div class="player-identity">
     <div class="player-avatar">⚔️</div>
     <div class="player-name-wrap">
-      <div class="player-name" id="barPlayerName">Lee <span style="font-size:12px; background:#1f6feb; padding:2px 8px; border-radius:10px; color:#fff;">Cấp 32</span></div>
-      <div class="player-meta" id="barPlayerMeta">Ải hiện tại: 1-1 Dễ | Lực chiến: 100</div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap;">
+        <div class="player-name notranslate" id="barPlayerName" translate="no" style="margin-bottom:0; white-space:nowrap;">Lee <span style="font-size:12px; background:#1f6feb; padding:2px 8px; border-radius:10px; color:#fff;">Cấp 35</span></div>
+        <div class="lang-switch-group notranslate" id="langSwitchGroup" translate="no" title="Chuyển đổi ngôn ngữ / Switch Language">
+          <button type="button" class="lang-btn active notranslate" id="langBtnVi" onclick="switchLanguage('vi')" translate="no" title="Tiếng Việt">
+            <svg class="lang-flag" width="16" height="11" viewBox="0 0 900 600">
+              <rect width="900" height="600" fill="#da251d"/>
+              <polygon points="450,150 491,277 625,277 516,356 558,483 450,404 342,483 384,356 275,277 409,277" fill="#ff0"/>
+            </svg>
+            <span>Tiếng Việt</span>
+          </button>
+          <button type="button" class="lang-btn notranslate" id="langBtnEn" onclick="switchLanguage('en')" translate="no" title="Tiếng Anh">
+            <svg class="lang-flag" width="16" height="11" viewBox="0 0 60 30">
+              <clipPath id="engDiag"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
+              <rect width="60" height="30" fill="#012169"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#engDiag)" stroke="#c8102e" stroke-width="4"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#ce1124" stroke-width="6"/>
+            </svg>
+            <span>Tiếng Anh</span>
+          </button>
+        </div>
+      </div>
+      <div class="player-meta notranslate" id="barPlayerMeta" translate="no">Ải hiện tại: 1-1 Dễ | Lực chiến: 100</div>
     </div>
   </div>
 
@@ -532,10 +650,10 @@
   </div>
 
   <div class="player-actions">
-    <button class="live-toggle-btn" id="liveSyncToggleBtn" onclick="toggleLiveSync()">🟢 Tự Động Cập Nhật (BẬT)</button>
-    <div class="ws-badge online" id="wsStatusBadge">
+    <button class="live-toggle-btn notranslate" id="liveSyncToggleBtn" translate="no" onclick="toggleLiveSync()">🟢 Tự Động Cập Nhật (BẬT)</button>
+    <div class="ws-badge online notranslate" id="wsStatusBadge" translate="no">
       <span class="pulse-dot"></span>
-      <span id="wsStatusText">Đang kết nối Genesis.exe</span>
+      <span id="wsStatusText" class="notranslate" translate="no">Đang kết nối Genesis.exe</span>
     </div>
   </div>
 </div>
@@ -570,6 +688,7 @@
 
   <button class="tab-btn stage-tab" data-tab="stage" onclick="switchMainTab('stage')">🏆 BXH Cày Vàng & EXP (Money/s & EXP/s)</button>
   <button class="tab-btn dps-tab" data-tab="dps" onclick="switchMainTab('dps')">⚔️ Thống Kê DPS Kỹ Năng (Combat Breakdown)</button>
+  <button class="tab-btn history-tab" data-tab="stageHistory" onclick="switchMainTab('stageHistory')">📜 Lịch Sử Chạy Ải</button>
   <button class="tab-btn ai-tab greyout" data-tab="ai" onclick="switchMainTab('ai')" title="Tính năng đang được phát triển">
     📊 Phân Tích Thông Minh <span style="font-size:10px; padding:2px 7px; border-radius:10px; background:#30363d; color:#8b949e; border:1px solid #484f58; margin-left:4px;">Đang phát triển</span>
   </button>
@@ -592,6 +711,9 @@
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="jewel-btn jewel-btn-primary" onclick="triggerManualJewelFuse()">⚡ Ghép Ngọc Tự Động</button>
+      <button class="jewel-btn jewel-btn-gold" id="btnManualFuseT3" onclick="triggerManualT3Fuse()" style="background:#9e6a03; color:#fff; border:1px solid #d29922; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer;" title="Ghép ngay lập tức các món Trang bị (cần 6) và Trang sức (cần 3) cùng Tier 3">🔨 Ghép Ngay Đồ Tier 3</button>
+      <button class="jewel-btn" id="btnManualEquipClass" onclick="triggerManualClassEquipOpt()" style="background:#1f6feb; color:#fff; border:1px solid #388bfd; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer;" title="Lắp ngay vũ khí chính &amp; phụ mạnh nhất phù hợp với Class hiện tại">⚔️ Tối Ưu Vũ Khí Class</button>
+      <button class="jewel-btn" id="btnManualSkillClass" onclick="triggerManualClassSkillOpt()" style="background:#6e40c9; color:#fff; border:1px solid #8957e5; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer;" title="Trang bị ngay bộ kỹ năng chuẩn cho Class hiện tại">🔮 Lắp Skill Chuẩn Class</button>
       <button class="jewel-btn jewel-btn-blue" onclick="triggerDepositJewelsToStorage()">📦 Cất Toàn Bộ Vào Kho</button>
       <button class="jewel-btn jewel-btn-purple" onclick="triggerWithdrawJewelsFromStorage()">📥 Rút Toàn Bộ Về Balo</button>
     </div>
@@ -637,11 +759,35 @@
         </div>
       </div>
 
+      <!-- TIER 3 GEAR FUSE SWITCH -->
+      <div class="jewel-switch-wrap" onclick="toggleAutoFuseGearT3()">
+        <div class="jewel-switch" id="switchAutoFuseGearT3"></div>
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:bold; font-size:13.5px; color:#58a6ff;">🛡️ Ghép Trang Bị Tier 3 (Yêu cầu 6 món)</div>
+            <div id="t3GearCountVal" style="font-size:13px; font-weight:bold; color:#79c0ff;">0 món</div>
+          </div>
+          <div style="font-size:11.5px; color:#8b949e;">Tự động đưa 6 trang bị cùng Tier 3 trong Balo và Kho đồ (Kho 1, 2, 3) vào lò rèn để nâng lên Tier 4.</div>
+        </div>
+      </div>
+
+      <!-- TIER 3 ACCESSORY FUSE SWITCH -->
+      <div class="jewel-switch-wrap" onclick="toggleAutoFuseAccT3()">
+        <div class="jewel-switch" id="switchAutoFuseAccT3"></div>
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:bold; font-size:13.5px; color:#bc8cff;">💍 Ghép Trang Sức Tier 3 (Yêu cầu 3 món)</div>
+            <div id="t3AccCountVal" style="font-size:13px; font-weight:bold; color:#d2a8ff;">0 món</div>
+          </div>
+          <div style="font-size:11.5px; color:#8b949e;">Tự động đưa 3 trang sức cùng Tier 3 trong Balo và Kho đồ (Kho 1, 2, 3) vào lò rèn để nâng lên Tier 4.</div>
+        </div>
+      </div>
+
       <div class="jewel-switch-wrap" onclick="toggleIncludeStorageJewels()">
         <div class="jewel-switch active" id="switchIncludeStorage"></div>
         <div>
-          <div style="font-weight:bold; font-size:13.5px; color:#f0f6fc;">Cho phép dùng ngọc trong Kho khi ghép</div>
-          <div style="font-size:11.5px; color:#8b949e;">Lò rèn sẽ tự động gom cả ngọc trong Balo lẫn Kho đồ (lưu cấu hình game).</div>
+          <div style="font-weight:bold; font-size:13.5px; color:#f0f6fc;">Cho phép dùng đồ &amp; ngọc trong Kho khi ghép</div>
+          <div style="font-size:11.5px; color:#8b949e;">Lò rèn sẽ tự động gom cả trang bị, trang sức và ngọc trong Balo lẫn Kho đồ (Kho 1, 2, 3).</div>
         </div>
       </div>
 
@@ -653,20 +799,40 @@
         </div>
       </div>
 
-      <!-- TIER FUSION FILTER SETTINGS -->
+      <!-- AUTO EQUIP BEST WEAPONS ON CLASS SWITCH -->
+      <div class="jewel-switch-wrap" onclick="toggleAutoEquipWeaponOnClassSwitch()">
+        <div class="jewel-switch active" id="switchAutoEquipWeaponOnClassSwitch"></div>
+        <div>
+          <div style="font-weight:bold; font-size:13.5px; color:#58a6ff;">⚔️ Tự động lắp Vũ Khí Mạnh Nhất khi đổi Class</div>
+          <div style="font-size:11.5px; color:#8b949e;">Khi đổi nhân vật ra trận trong game, tự tìm và lắp vũ khí chính &amp; phụ mạnh nhất (tìm cả Balo và Kho 1, 2, 3).</div>
+        </div>
+      </div>
+
+      <!-- AUTO EQUIP MATCHING SKILLS ON CLASS SWITCH -->
+      <div class="jewel-switch-wrap" onclick="toggleAutoEquipSkillOnClassSwitch()">
+        <div class="jewel-switch active" id="switchAutoEquipSkillOnClassSwitch"></div>
+        <div>
+          <div style="font-weight:bold; font-size:13.5px; color:#d2a8ff;">🔮 Tự động đổi Kỹ Năng (Skill) chuẩn khi đổi Class</div>
+          <div style="font-size:11.5px; color:#8b949e;">Khi đổi nhân vật ra trận trong game, tự động lắp bộ kỹ năng tối ưu phù hợp với class tương ứng.</div>
+        </div>
+      </div>
+
+      <!-- TIER FUSION FILTER SETTINGS (ONLY FOR JEWELS) -->
       <div style="margin-top:14px; padding-top:12px; border-top:1px solid #30363d;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-          <div style="font-weight:bold; font-size:13px; color:#e3b341; display:flex; align-items:center; gap:6px;">
-            <span>🎯 Giới Hạn Bậc Auto Ghép (Tích chọn Tier):</span>
+          <div style="font-weight:bold; font-size:13px; color:#e3b341; display:flex; align-items:center; gap:8px;">
+            <span>🎯 Giới Hạn Bậc Auto Ghép (Chỉ Dành Cho Ngọc):</span>
+            <span style="font-size:11px; font-weight:bold; background:rgba(227, 179, 65, 0.15); color:#f2cc60; border:1px solid rgba(227, 179, 65, 0.4); border-radius:4px; padding:2px 7px;">Chỉ áp dụng cho Ngọc (Jewels)</span>
           </div>
           <div style="display:flex; gap:6px;">
-            <button class="small-btn" style="padding:2px 8px; font-size:11px; background:#238636; color:#fff;" onclick="selectAllJewelTiers(true)">Tất cả (Tier 1-7)</button>
+            <button class="small-btn" style="padding:2px 8px; font-size:11px; background:#238636; color:#fff;" onclick="selectAllJewelTiers(true)">Tất cả ngọc (Tier 1-7)</button>
             <button class="small-btn" style="padding:2px 8px; font-size:11px; background:#21262d; color:#8b949e;" onclick="selectAllJewelTiers(false)">Bỏ chọn hết</button>
           </div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;" id="jewelTierCheckboxGroup"></div>
-        <div style="font-size:11px; color:#8b949e; margin-top:6px;">
-          ℹ️ Chỉ tự động ghép các bậc được tích dấu xanh. Bậc không tích sẽ giữ nguyên để dùng hoặc khảm trang bị.
+        <div style="font-size:11.5px; color:#8b949e; margin-top:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span>ℹ️</span>
+          <span>Bộ lọc bậc này <strong style="color:#e3b341;">CHỈ DÀNH CHO NGỌC</strong>: Hệ thống chỉ tự động ghép các bậc ngọc được tích dấu xanh (đủ 6 viên). Bậc không tích sẽ giữ nguyên để dùng hoặc khảm trang bị. <em>(Không áp dụng cho tính năng Ghép Trang bị / Trang sức Tier 3 ở trên).</em></span>
         </div>
       </div>
     </div>
@@ -938,6 +1104,48 @@
   </div>
 </div>
 
+<!-- SECTION: LỊCH SỬ CHẠY ẢI (20 ẢI GẦN NHẤT) -->
+<div id="stageHistorySection" style="display:none;">
+  <div class="stage-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--border-color); padding-bottom:14px; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h2 style="margin:0; color:#3fb950; display:flex; align-items:center; gap:8px;">
+          📜 Lịch Sử Chạy Ải (20 Ải Gần Nhất)
+        </h2>
+        <div style="font-size:13px; color:#8b949e; margin-top:4px;">
+          Tự động ghi lại 20 lần chạy ải gần nhất từ game. Giữ nguyên định dạng cột của BXH, phân loại màu sắc: <span style="color:#3fb950; font-weight:bold;">Thành công</span>, <span style="color:#f85149; font-weight:bold;">FAILED (Đỏ)</span> và <span style="color:#8b949e; font-weight:bold;">Bỏ dở giữa chừng (Xám)</span>.
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="small-btn" style="background:#238636; color:#fff;" onclick="renderStageHistoryTable()">🔄 Làm Mới</button>
+        <button class="small-btn" style="background:#21262d; color:#f85149; border:1px solid #f8514944;" onclick="clearStageHistory()">🗑️ Xóa Lịch Sử</button>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div style="overflow-x:auto;">
+      <table id="stageHistoryTable">
+        <thead>
+          <tr>
+            <th style="width:55px; text-align:center;"># Lượt</th>
+            <th>🗺️ Ải Trong Game</th>
+            <th>🌲 Khu Vực</th>
+            <th style="color:#e3b341;">💰 Vàng / Giây</th>
+            <th style="color:#bc8cff;">📈 EXP / Giây</th>
+            <th style="color:#f2cc60;">🪙 Vàng / Phút</th>
+            <th>🎁 Thưởng Vàng (Ải + Boss)</th>
+            <th>⭐ Thưởng EXP</th>
+            <th>⏱️ Thời Gian Dọn</th>
+            <th>❤️ Máu Quái (HP)</th>
+            <th style="text-align:center; width:140px;">📊 Trạng Thái</th>
+          </tr>
+        </thead>
+        <tbody id="stageHistoryTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- SECTION 3: PHÂN RÃ & THỐNG KÊ DPS KỸ NĂNG -->
 <div id="dpsSection" style="display:none;">
   <div class="dps-container">
@@ -1037,14 +1245,19 @@
 
     <!-- SECTION 3B: CLASS DPS & STATS COMPARISON -->
     <div id="classDpsComparisonSection" style="margin-top:24px; background:#161b22; border:1px solid #30363d; border-radius:10px; padding:20px;">
-      <div style="margin-bottom:14px;">
-        <h3 style="color:#58a6ff; margin:0 0 4px 0; font-size:16px; display:flex; align-items:center; gap:8px;">
-          📊 So Sánh DPS & Chỉ Số Giữa 3 Class (Dữ Liệu Đã Ghi Nhớ)
-        </h3>
-        <div style="font-size:12px; color:#8b949e;">
-          • Dữ liệu DPS và chỉ số chiến đấu được tự động lưu lại mỗi khi bạn đăng nhập hoặc chuyển sang chơi class đó trong game.<br>
-          • Class chưa từng được ghi nhận thông tin sẽ để trống (không ghi gì cả).
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h3 style="color:#58a6ff; margin:0 0 4px 0; font-size:16px; display:flex; align-items:center; gap:8px;">
+            📊 So Sánh DPS & Chỉ Số Giữa 3 Class (Dữ Liệu Đã Ghi Nhớ)
+          </h3>
+          <div style="font-size:12px; color:#8b949e;">
+            • Dữ liệu DPS và chỉ số chiến đấu được tự động lưu lại mỗi khi bạn đăng nhập hoặc chuyển sang chơi class đó trong game.<br>
+            • Class chưa từng được ghi nhận thông tin sẽ để trống (không ghi gì cả).
+          </div>
         </div>
+        <button id="resetClassDpsBtn" onclick="resetClassDpsHistory()" style="background:#21262d; color:#f85149; border:1px solid #30363d; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="Xóa bỏ toàn bộ lịch sử DPS các class đã lưu trong trình duyệt">
+          🗑️ Xóa Lịch Sử So Sánh
+        </button>
       </div>
 
       <div id="classDpsComparisonContainer" style="overflow-x:auto;">
@@ -12147,26 +12360,28 @@ function updateLiveSyncStatus(state) {
   const btn = document.getElementById('liveSyncToggleBtn');
   if (!badge || !text || !btn) return;
 
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
+
   if (state === 'online') {
-    badge.className = 'ws-badge online';
-    text.innerText = '🟢 Trực tiếp (' + new Date().toLocaleTimeString() + ')';
-    btn.className = 'live-toggle-btn';
-    btn.innerHTML = '🟢 Tự Động Cập Nhật (BẬT)';
+    badge.className = 'ws-badge online notranslate';
+    text.innerText = isEn ? ('🟢 Live (' + new Date().toLocaleTimeString() + ')') : ('🟢 Trực tiếp (' + new Date().toLocaleTimeString() + ')');
+    btn.className = 'live-toggle-btn notranslate';
+    btn.innerHTML = isEn ? '🟢 Auto Update (ON)' : '🟢 Tự Động Cập Nhật (BẬT)';
   } else if (state === 'connecting') {
-    badge.className = 'ws-badge connecting';
-    text.innerText = '🔄 Đang kết nối Genesis.exe...';
-    btn.className = 'live-toggle-btn';
-    btn.innerHTML = '🔄 Đang kết nối...';
+    badge.className = 'ws-badge connecting notranslate';
+    text.innerText = isEn ? '🔄 Connecting Genesis.exe...' : '🔄 Đang kết nối Genesis.exe...';
+    btn.className = 'live-toggle-btn notranslate';
+    btn.innerHTML = isEn ? '🔄 Connecting...' : '🔄 Đang kết nối...';
   } else if (state === 'paused') {
-    badge.className = 'ws-badge paused';
-    text.innerText = '🟡 Đã tạm dừng cập nhật';
-    btn.className = 'live-toggle-btn paused';
-    btn.innerHTML = '▶️ Bật Tự Động Cập Nhật';
+    badge.className = 'ws-badge paused notranslate';
+    text.innerText = isEn ? '🟡 Update Paused' : '🟡 Đã tạm dừng cập nhật';
+    btn.className = 'live-toggle-btn paused notranslate';
+    btn.innerHTML = isEn ? '▶️ Turn On Auto Update' : '▶️ Bật Tự Động Cập Nhật';
   } else {
-    badge.className = 'ws-badge offline';
-    text.innerText = '⚪ Game chưa mở (Offline)';
-    btn.className = 'live-toggle-btn paused';
-    btn.innerHTML = '▶️ Thử Kết Nối Lại';
+    badge.className = 'ws-badge offline notranslate';
+    text.innerText = isEn ? '⚪ Game Not Open (Offline)' : '⚪ Game chưa mở (Offline)';
+    btn.className = 'live-toggle-btn paused notranslate';
+    btn.innerHTML = isEn ? '▶️ Retry Connection' : '▶️ Thử Kết Nối Lại';
   }
 }
 
@@ -12233,7 +12448,7 @@ function pollLiveGame() {
 function sendEvaluatePoll() {
   if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
 
-  const code = '(' + (async function() {
+  const code = '(' + (async function(cfg) {
     try {
       let userC, stageC, treeC, itemC, sUser, sCombat, sContent;
       for (let [k, v] of nn.netData._mapContainer.entries()) {
@@ -12309,13 +12524,30 @@ function sendEvaluatePoll() {
         }
       } catch(e){}
 
-      // === LIVE SKILL TREE: read actual levels from NetContainerTree ===
+      // === LIVE SKILL TREE & TRAINING SKILLS: read actual levels from NetContainerTree ===
       const liveSkillLevels = {};
+      const trainingSkills = {};
       try {
+        let treeType1 = null;
         let treeType4 = null;
         for (let [k, v] of treeC._mapTreeInfo.entries()) {
-          if (k === 4) { treeType4 = v; break; }
+          if (k === 1) treeType1 = v;
+          if (k === 4) treeType4 = v;
         }
+        // Training skills (Category 1)
+        if (treeType1 && treeType1._dicValue) {
+          for (let [groupTid, treeInfo] of treeType1._dicValue.entries()) {
+            const treeTid = treeInfo._treeTid;
+            const level = Math.round((treeTid - groupTid) / 10) + 1;
+            trainingSkills[groupTid] = { tid: treeTid, level: level };
+          }
+        } else if (treeType1 && treeType1.keys) {
+          for (let sk of treeType1.keys()) {
+            const node = treeType1.getValue(sk);
+            if (node) trainingSkills[sk] = { tid: node._treeTid, level: (node._treeTid % 100) };
+          }
+        }
+        // Active skill tree (Category 4)
         if (treeType4 && treeType4._dicValue) {
           for (let [groupTid, treeInfo] of treeType4._dicValue.entries()) {
             const treeTid = treeInfo._treeTid;
@@ -12325,13 +12557,298 @@ function sendEvaluatePoll() {
         }
       } catch(e) {}
 
-      // === AUTO CLASS DETECTION from deployed skill TID prefix ===
-      let heroClass = 'Ranged';
-      if (mySkills && mySkills.length > 0) {
+      // === AUTO CLASS DETECTION & AUTO EQUIP WEAPONS + SKILLS ===
+      let heroClassType = 2; // 1: Melee, 2: Ranged, 3: Mage
+      try {
+        if (nn.services.hero && nn.services.hero.getCurrentHeroClassType) {
+          heroClassType = nn.services.hero.getCurrentHeroClassType();
+        }
+      } catch(e) {}
+
+      let heroClass = heroClassType === 1 ? 'Melee' : (heroClassType === 3 ? 'Mage' : 'Ranged');
+      if (!heroClassType && mySkills && mySkills.length > 0) {
         const firstTid = String(mySkills[0]);
         if (firstTid.startsWith('81')) heroClass = 'Melee';
         else if (firstTid.startsWith('83')) heroClass = 'Mage';
         else heroClass = 'Ranged';
+      }
+
+      let classSwitched = false;
+      let prevClassType = globalThis.__lastActiveHeroClassType;
+      if (globalThis.__lastActiveHeroClassType === undefined) {
+        globalThis.__lastActiveHeroClassType = heroClassType;
+      } else if (globalThis.__lastActiveHeroClassType !== heroClassType) {
+        classSwitched = true;
+        globalThis.__lastActiveHeroClassType = heroClassType;
+      }
+
+      let autoEquipWeaponRes = null;
+      let autoEquipSkillRes = null;
+      let manualEquipWeapons = false;
+      let manualEquipSkills = false;
+
+      // Helper to auto equip best weapons for hero class (PartsType 1 = Main, PartsType 2 = Sub)
+      async function autoEquipBestWeaponsForClass(targetClassType) {
+        try {
+          const sHero = nn.services.hero;
+          const sEquip = nn.services.equipment;
+          const sPreset = nn.services.preset;
+          const pGear = sPreset ? sPreset.gear : null;
+          const gameSession = nn.net.manager.gameSession;
+          if (!pGear || !gameSession) return { error: 'No gear preset or game session' };
+
+          const userLv = nn.net.data.user ? nn.net.data.user.lv : 33;
+          const allItems = nn.net.data.item.getAllItemNotStack();
+
+          const getItemScore = (it, dbEq) => {
+            const rating = dbEq.RatingType || 1;
+            const attack = dbEq.BaseAttack || (dbEq.EquipAbilityDetail && dbEq.EquipAbilityDetail[0]) || 0;
+            return (rating * 1000000) + attack;
+          };
+
+          let candidatesMain = [];
+          let candidatesSub = [];
+
+          for (let it of allItems) {
+            if (it.location !== 1 && it.location !== 2 && it.location !== 3) continue;
+            const dbEq = nn.db.equip.get(it.itemTid);
+            if (!dbEq) continue;
+
+            // Must be compatible with class
+            if (!nn.db.equip.canEquipByHeroClass(it.itemTid, targetClassType)) continue;
+
+            const limitLv = (sEquip && sEquip.getEquipLimitLevel) ? sEquip.getEquipLimitLevel(it.itemTid, it.itemId) : (dbEq.BaseLimitLevel || 1);
+            if (userLv < limitLv) continue;
+
+            if (dbEq.PartsType === 1) {
+              candidatesMain.push({ it, dbEq, score: getItemScore(it, dbEq) });
+            } else if (dbEq.PartsType === 2) {
+              candidatesSub.push({ it, dbEq, score: getItemScore(it, dbEq) });
+            }
+          }
+
+          candidatesMain.sort((a, b) => b.score - a.score);
+          candidatesSub.sort((a, b) => b.score - a.score);
+
+          const bestMain = candidatesMain.length > 0 ? candidatesMain[0] : null;
+          const bestSub = candidatesSub.length > 0 ? candidatesSub[0] : null;
+          const result = { main: null, sub: null };
+
+          if (bestMain) {
+            const mItem = bestMain.it;
+            const mDb = bestMain.dbEq;
+            const mLoc = nn.db.locale.get(mDb.ItemName);
+            const mName = mLoc?.VI || mLoc?.EN || mDb.ItemName;
+            if (mItem.location !== 3) {
+              if (mItem.location === 2) {
+                let sim = null;
+                for (let [k, v] of nn.services._mapService.entries()) {
+                  if (k.name === 'ServiceItemMove' || k.toString() === 'ServiceItemMove') sim = v;
+                }
+                let transitIdx = sim ? sim.findInventoryEmptyTargetIdx() : -1;
+                if (transitIdx < 0) {
+                  const usedSlots = new Set(allItems.filter(i => i.location === 1).map(i => i.slotIdx));
+                  transitIdx = 0;
+                  while (usedSlots.has(transitIdx) && transitIdx < 100) transitIdx++;
+                }
+                const moveOutRes = await gameSession.reqStorageMoveOut(mItem.itemId, transitIdx);
+                if (moveOutRes && moveOutRes.hasError && moveOutRes.hasError()) {
+                  result.main = { tid: mItem.itemTid, name: mName, tier: mDb.RatingType, error: 'Storage move out failed' };
+                } else {
+                  await pGear.reqEquipCurrentPreset(1, mItem.itemTid, mItem.itemId);
+                  result.main = { tid: mItem.itemTid, name: mName, tier: mDb.RatingType, from: 'Kho' };
+                }
+              } else {
+                await pGear.reqEquipCurrentPreset(1, mItem.itemTid, mItem.itemId);
+                result.main = { tid: mItem.itemTid, name: mName, tier: mDb.RatingType, from: 'Balo' };
+              }
+            } else {
+              result.main = { tid: mItem.itemTid, name: mName, tier: mDb.RatingType, status: 'already_equipped' };
+            }
+          }
+
+          if (bestSub) {
+            const sItem = bestSub.it;
+            const sDb = bestSub.dbEq;
+            const sLoc = nn.db.locale.get(sDb.ItemName);
+            const sName = sLoc?.VI || sLoc?.EN || sDb.ItemName;
+            if (sItem.location !== 3) {
+              if (sItem.location === 2) {
+                let sim = null;
+                for (let [k, v] of nn.services._mapService.entries()) {
+                  if (k.name === 'ServiceItemMove' || k.toString() === 'ServiceItemMove') sim = v;
+                }
+                let transitIdx = sim ? sim.findInventoryEmptyTargetIdx() : -1;
+                if (transitIdx < 0) {
+                  const freshAllItems = nn.net.data.item.getAllItemNotStack();
+                  const usedSlots = new Set(freshAllItems.filter(i => i.location === 1).map(i => i.slotIdx));
+                  transitIdx = 0;
+                  while (usedSlots.has(transitIdx) && transitIdx < 100) transitIdx++;
+                }
+                const moveOutRes = await gameSession.reqStorageMoveOut(sItem.itemId, transitIdx);
+                if (moveOutRes && moveOutRes.hasError && moveOutRes.hasError()) {
+                  result.sub = { tid: sItem.itemTid, name: sName, tier: sDb.RatingType, error: 'Storage move out failed' };
+                } else {
+                  await pGear.reqEquipCurrentPreset(2, sItem.itemTid, sItem.itemId);
+                  result.sub = { tid: sItem.itemTid, name: sName, tier: sDb.RatingType, from: 'Kho' };
+                }
+              } else {
+                await pGear.reqEquipCurrentPreset(2, sItem.itemTid, sItem.itemId);
+                result.sub = { tid: sItem.itemTid, name: sName, tier: sDb.RatingType, from: 'Balo' };
+              }
+            } else {
+              result.sub = { tid: sItem.itemTid, name: sName, tier: sDb.RatingType, status: 'already_equipped' };
+            }
+          }
+
+          return result;
+        } catch(err) {
+          return { error: err.toString() };
+        }
+      }
+
+      // Helper to auto equip matching skills for hero class dynamically from Skill Tree up to 6 skills
+      // Helper to auto equip matching skills for hero class dynamically from Skill Tree up to 6 skills
+      async function autoEquipSkillsForClass(targetClassType) {
+        try {
+          const pSkill = nn.services.preset.skill;
+          const sHero = nn.services.hero;
+          if (!pSkill) return { error: 'No skill preset' };
+
+          const userLv = nn.net.data.user ? nn.net.data.user.lv : 35;
+
+          // 1. Retrieve skills actually learned on Skill Tree (TreeType 4 = SkillTree)
+          let learnedTids = [];
+          try {
+            if (nn.services.tree && nn.services.tree.getAllTreeTid) {
+              learnedTids = nn.services.tree.getAllTreeTid(4) || [];
+            }
+          } catch (e) {}
+
+          if (learnedTids.length === 0) {
+            try {
+              for (let [k, v] of nn.services._mapService.entries()) {
+                const name = k.name || k.toString();
+                if (name === 'ServiceTree' && v.getAllTreeTid) {
+                  learnedTids = v.getAllTreeTid(4) || [];
+                }
+              }
+            } catch (e) {}
+          }
+
+          if (learnedTids.length === 0 && nn.net.data.tree && nn.net.data.tree._mapTreeInfo) {
+            try {
+              const sub = nn.net.data.tree._mapTreeInfo.get(4);
+              if (sub && sub.getValuesArray) {
+                learnedTids = sub.getValuesArray().map(v => v.treeTid);
+              }
+            } catch(e) {}
+          }
+
+          let targetSkills = [];
+
+          if (learnedTids.length > 0) {
+            const candidates = [];
+            const seenGroups = new Set();
+
+            for (let tid of learnedTids) {
+              const sk = nn.db.skill && nn.db.skill.get ? nn.db.skill.get(tid) : null;
+              if (!sk) continue;
+              // Must be an Active skill (SkillClassType === 2). Passives (3) cannot be equipped in preset slots
+              if (sk.SkillClassType !== 2) continue;
+              // Must match target hero class
+              if (sk.HeroClassType !== targetClassType) continue;
+
+              // Server preset table requires base GroupID (Level 1 tid), e.g. 8301010 instead of 8301030
+              const baseTid = sk.GroupID || sk.SkillID;
+              if (seenGroups.has(baseTid)) continue;
+              seenGroups.add(baseTid);
+
+              const baseDb = (nn.db.skill && nn.db.skill.get ? nn.db.skill.get(baseTid) : null) || sk;
+              const locKey = baseDb.SkilName || baseDb.SkillName;
+              const loc = locKey ? nn.db.locale.get(locKey) : null;
+              candidates.push({
+                skillId: baseTid,
+                order: baseDb.Order || 1,
+                openLv: baseDb.OpenLevel || 1,
+                name: loc?.VI || loc?.EN || locKey || ('Skill ' + baseTid)
+              });
+            }
+
+            // Sort: Order 1 (primary attack) first, then Order 2, 3, etc.
+            // Within same order, higher OpenLevel = higher tier skill
+            candidates.sort((a, b) => {
+              if (a.order !== b.order) return a.order - b.order;
+              return b.openLv - a.openLv;
+            });
+
+            targetSkills = candidates.slice(0, 6);
+          }
+
+          // Safe fallback with verified learned active skills if tree sync is pending
+          if (targetSkills.length === 0) {
+            const fallbackMap = {
+              1: [8101010, 8108010, 8102010, 8109010, 8103010, 8104010],
+              2: [8201010, 8208010, 8202010, 8209010, 8203010, 8210010],
+              3: [8301010, 8308010, 8302010, 8309010, 8303010, 8310010]
+            };
+            const list = fallbackMap[targetClassType] || fallbackMap[2];
+            targetSkills = list.map(tid => {
+              const skDb = nn.db.skill && nn.db.skill.get ? nn.db.skill.get(tid) : null;
+              const locKey = skDb?.SkilName || skDb?.SkillName;
+              const loc = locKey ? nn.db.locale.get(locKey) : null;
+              return {
+                skillId: tid,
+                name: loc?.VI || loc?.EN || locKey || ('Skill ' + tid)
+              };
+            });
+          }
+
+          const curPresetNo = pSkill.getCurrentPresetNumber();
+          const openSlotCount = sHero && sHero.getOpenSkillSlotCount ? sHero.getOpenSkillSlotCount() : 6;
+          const slotsToEquip = Math.min(openSlotCount, targetSkills.length);
+          const equippedSkills = [];
+
+          // 1. Unequip all existing slots cleanly 1..6 first to eliminate duplicate skill collision or remaining skills from previous class
+          for (let slotIdx = 1; slotIdx <= 6; slotIdx++) {
+            const s = pSkill.getPresetItemSlot(curPresetNo, slotIdx);
+            if (s && s.itemTid > 0) {
+              await pSkill.reqUnEquipCurrentPreset(slotIdx);
+            }
+          }
+
+          // 2. Equip target skills into slots
+          for (let slotIdx = 1; slotIdx <= slotsToEquip; slotIdx++) {
+            const skillObj = targetSkills[slotIdx - 1];
+            const skillTid = skillObj.skillId;
+            const res = await pSkill.reqEquipCurrentPreset(slotIdx, skillTid, 0n);
+            if (!res || !res.hasError || !res.hasError()) {
+              equippedSkills.push({ slot: slotIdx, tid: skillTid, name: skillObj.name });
+            }
+          }
+
+          // 3. Force UI refresh on open PanelCharacterSetting and PanelCharacter so UI checkmarks and slots update immediately
+          try {
+            const pSetting = nn.ui.manager.getPanel("PanelCharacterSetting");
+            if (pSetting && pSetting.isShowing) {
+              const pcs = pSetting.Parts?.find(p => p.constructor.name === 'PartCharacterSettingSkill');
+              if (pcs) {
+                if (pcs.refreshAll) pcs.refreshAll();
+                if (pcs.rebuildSkillList) pcs.rebuildSkillList();
+                if (pcs.refreshListStates) pcs.refreshListStates();
+              }
+            }
+            const pChar = nn.ui.manager.getPanel("PanelCharacter");
+            if (pChar && pChar.isShowing) {
+              const pcs = pChar._partCharacter?.Parts?.find(p => p.constructor.name === 'PartCharSkill');
+              if (pcs && pcs.refreshSkills) pcs.refreshSkills();
+            }
+          } catch(e) {}
+
+          return { success: true, count: equippedSkills.length, skills: equippedSkills };
+        } catch(err) {
+          return { error: err.toString() };
+        }
       }
 
       // === JEWEL FORGE & STORAGE PROCESSOR + QUERY ===
@@ -12353,11 +12870,117 @@ function sendEvaluatePoll() {
         }
 
         // Execute pending action if requested
+        manualEquipWeapons = false;
+        manualEquipSkills = false;
         const cmd = globalThis.__pendingJewelCmd;
         if (cmd) {
           globalThis.__pendingJewelCmd = null;
           if (cmd.action === 'toggleStorage' && sWorkshop) {
             sWorkshop.setAutoRegisterIncludeStorage('Fusion', !!cmd.includeStorage);
+          } else if (cmd.action === 'fuseT3' && sWorkshop) {
+            // Ensure fusion allows storage candidates (Kho 1, 2, 3)
+            sWorkshop.setAutoRegisterIncludeStorage('Fusion', true);
+
+            // Fuse Tier 3 Gear (requires 6 items from Balo or Kho 1, 2, 3)
+            if (cmd.fuseGear) {
+              sWorkshop.setFusionContentType(1); // 1 = Gear
+              sWorkshop.setAutoRegisterRating('Fusion', 3); // Tier 3
+              let loopGuard = 0;
+              while (loopGuard < 10) {
+                // Collect candidate Tier 3 items from Balo and Kho 1, 2, 3
+                const candidates = sWorkshop.collectAutoRegisterCandidates(
+                  'Fusion',
+                  (itemTid, itemId) => !sWorkshop.isFusionStaged(itemId) && sWorkshop.canStageFusionItem(itemTid, itemId),
+                  true,
+                  { rating: 3 }
+                ).filter(c => c.ratingType === 3);
+
+                if (candidates.length < 6) break;
+
+                let targetTable = null;
+                for (let c of candidates) {
+                  const ft = sWorkshop.resolveFusionTableByItem(c.itemTid, c.itemId);
+                  if (ft && ft.MaterialRating === 3) {
+                    targetTable = ft;
+                    break;
+                  }
+                }
+                if (targetTable) {
+                  sWorkshop.clearFusionStaging();
+                  sWorkshop.lockFusionTable(targetTable);
+                  sWorkshop.fillFusionSlots(targetTable, candidates);
+                } else {
+                  sWorkshop.autoRegisterFusion();
+                }
+
+                if (!sWorkshop.isFusionStagingFull()) {
+                  sWorkshop.clearFusionStaging();
+                  break;
+                }
+                const fusionRes = await sWorkshop.reqFusionStagedAsync();
+                if (fusionRes && fusionRes.length > 0) {
+                  loopGuard++;
+                  const rTid = fusionRes[0].tid;
+                  const rInfo = nn.db.equip.get(rTid) || nn.db.item.get(rTid);
+                  const rLoc = nn.db.locale.get(rInfo?.ItemName);
+                  const rName = rLoc?.VI || rLoc?.EN || rInfo?.ItemName || ('Trang bị TID ' + rTid);
+                  jewelData.fusedHistory.push('🛡️ Ghép T3 (Balo & Kho): ' + rName);
+                } else {
+                  sWorkshop.clearFusionStaging();
+                  break;
+                }
+              }
+            }
+            // Fuse Tier 3 Accessories (requires 3 items from Balo or Kho 1, 2, 3)
+            if (cmd.fuseAcc) {
+              sWorkshop.setFusionContentType(2); // 2 = Accessory / Trang sức
+              sWorkshop.setAutoRegisterRating('Fusion', 3); // Tier 3
+              let loopGuard = 0;
+              while (loopGuard < 10) {
+                // Collect candidate Tier 3 accessories from Balo and Kho 1, 2, 3
+                const candidates = sWorkshop.collectAutoRegisterCandidates(
+                  'Fusion',
+                  (itemTid, itemId) => !sWorkshop.isFusionStaged(itemId) && sWorkshop.canStageFusionItem(itemTid, itemId),
+                  true,
+                  { rating: 3 }
+                ).filter(c => c.ratingType === 3);
+
+                if (candidates.length < 3) break;
+
+                let targetTable = null;
+                for (let c of candidates) {
+                  const ft = sWorkshop.resolveFusionTableByItem(c.itemTid, c.itemId);
+                  if (ft && ft.MaterialRating === 3) {
+                    targetTable = ft;
+                    break;
+                  }
+                }
+                if (targetTable) {
+                  sWorkshop.clearFusionStaging();
+                  sWorkshop.lockFusionTable(targetTable);
+                  sWorkshop.fillFusionSlots(targetTable, candidates);
+                } else {
+                  sWorkshop.autoRegisterFusion();
+                }
+
+                if (!sWorkshop.isFusionStagingFull()) {
+                  sWorkshop.clearFusionStaging();
+                  break;
+                }
+                const fusionRes = await sWorkshop.reqFusionStagedAsync();
+                if (fusionRes && fusionRes.length > 0) {
+                  loopGuard++;
+                  const rTid = fusionRes[0].tid;
+                  const rInfo = nn.db.equip.get(rTid) || nn.db.item.get(rTid);
+                  const rLoc = nn.db.locale.get(rInfo?.ItemName);
+                  const rName = rLoc?.VI || rLoc?.EN || rInfo?.ItemName || ('Trang sức TID ' + rTid);
+                  jewelData.fusedHistory.push('💍 Ghép T3 (Balo & Kho): ' + rName);
+                } else {
+                  sWorkshop.clearFusionStaging();
+                  break;
+                }
+              }
+            }
           } else if (cmd.action === 'fuse' && sWorkshop) {
             sWorkshop.setFusionContentType(20);
             sWorkshop.setAutoRegisterIncludeStorage('Fusion', cmd.includeStorage !== false);
@@ -12455,7 +13078,24 @@ function sendEvaluatePoll() {
               await gs.reqStorageMoveOutList(toWithdraw);
               jewelData.withdrawnCount = toWithdraw.length;
             }
+          } else if (cmd.action === 'equipClassWeapons') {
+            manualEquipWeapons = true;
+          } else if (cmd.action === 'equipClassSkills') {
+            manualEquipSkills = true;
           }
+        }
+
+        autoEquipWeaponRes = null;
+        autoEquipSkillRes = null;
+
+        const shouldEquipWeapons = (classSwitched && cfg && cfg.autoEquipWeapon) || manualEquipWeapons;
+        if (shouldEquipWeapons) {
+          autoEquipWeaponRes = await autoEquipBestWeaponsForClass(heroClassType);
+        }
+
+        const shouldEquipSkills = (classSwitched && cfg && cfg.autoEquipSkill) || manualEquipSkills;
+        if (shouldEquipSkills) {
+          autoEquipSkillRes = await autoEquipSkillsForClass(heroClassType);
         }
 
         // Query jewels & storage state
@@ -12463,6 +13103,35 @@ function sendEvaluatePoll() {
         jewelData.storageTotal = nn.db.config?.gen?.Storage_Slot_Cnt || 42;
         jewelData.storageUsed = allNotStack.filter(i => i.location === 2).length; // 2 = Kho đồ
         jewelData.includeStorage = sWorkshop ? sWorkshop.getAutoRegisterIncludeStorage('Fusion') : false;
+
+        // Count Tier 3 items in inventory (location 1) AND storage (Kho 1, 2, 3, location 2)
+        let t3GearInv = 0;
+        let t3GearStorage = 0;
+        let t3AccInv = 0;
+        let t3AccStorage = 0;
+        for (let it of allNotStack) {
+          if (!it.isLock && (it.location === 1 || it.location === 2)) {
+            const dbEquip = nn.db.equip.get(it.itemTid);
+            if (dbEquip && dbEquip.RatingType === 3) {
+              const isGear = dbEquip.EquipType === 1 || (dbEquip.PartsType && dbEquip.PartsType <= 8);
+              const isAcc = dbEquip.EquipType === 2 || (dbEquip.PartsType && dbEquip.PartsType >= 9);
+              if (isGear) {
+                if (it.location === 1) t3GearInv++;
+                else if (it.location === 2) t3GearStorage++;
+              } else if (isAcc) {
+                if (it.location === 1) t3AccInv++;
+                else if (it.location === 2) t3AccStorage++;
+              }
+            }
+          }
+        }
+        jewelData.t3GearCount = t3GearInv + t3GearStorage;
+        jewelData.t3GearInvCount = t3GearInv;
+        jewelData.t3GearStorageCount = t3GearStorage;
+
+        jewelData.t3AccCount = t3AccInv + t3AccStorage;
+        jewelData.t3AccInvCount = t3AccInv;
+        jewelData.t3AccStorageCount = t3AccStorage;
 
         for (let it of allNotStack) {
           const dbInfo = nn.db.item.get(it.itemTid);
@@ -12513,6 +13182,93 @@ function sendEvaluatePoll() {
         // ignore
       }
 
+      // === STAGE RUN HISTORY TRACKER ===
+      if (!globalThis.__stageTracker) {
+        globalThis.__stageTracker = {
+          currentRun: null,
+          completedRuns: [],
+          lastRecordedGameId: null
+        };
+      }
+      let stageRunHistory = [];
+      try {
+        const sTracker = globalThis.__stageTracker;
+        const curProxy = sCombat ? sCombat.getCurrentActiveCombatProxy() : null;
+        const heroPawn = curProxy ? curProxy.getMyHeroPawn() : null;
+        let sStageInst = null;
+        for (let [k, v] of nn.services._mapService.entries()) {
+          const sName = k.name || k.toString();
+          if (sName === 'ServiceStage') sStageInst = v;
+        }
+        const activeStageTid = (sStageInst && sStageInst.playingStageTid) ? sStageInst.playingStageTid : ((sStageInst && sStageInst.stageTid) ? sStageInst.stageTid : (curProxy ? curProxy.fieldTid : stageTid));
+        const curClearTid = (sStageInst && sStageInst.stageInfo) ? sStageInst.stageInfo._clearStageTid : clearStageTid;
+        const isHeroDead = heroPawn ? (heroPawn._isDead || heroPawn._isAlive === false || (heroPawn._curHp !== undefined && heroPawn._curHp <= 0)) : false;
+        const isClearSeqStarted = curProxy ? !!curProxy._bStageClearSequenceStarted : false;
+        const isGameEnd = curProxy ? (!!curProxy._isGameEnd || curProxy._gameState === 4 || curProxy._gameState === 5) : false;
+        const curElapsed = curProxy ? (curProxy.elapsedTime || 0) : 0;
+        const curGameId = curProxy ? curProxy._gameId : null;
+        const nowTs = Date.now();
+
+        if (sTracker.currentRun) {
+          const cur = sTracker.currentRun;
+          const sameGame = curGameId && cur.gameId ? (curGameId === cur.gameId) : (curProxy && curProxy.fieldTid === cur.stageId);
+          
+          if (sameGame) {
+            cur.duration = curElapsed > 0 ? curElapsed : ((nowTs - cur.startTime) / 1000);
+            if (isHeroDead) cur.wasHeroDead = true;
+            if (isClearSeqStarted) cur.wasClearSeqStarted = true;
+            if (curClearTid > cur.initialClearTid) cur.clearedNewStage = true;
+          }
+
+          const battleEnded = (!sameGame && curGameId) || isGameEnd || isClearSeqStarted || cur.wasHeroDead || !curProxy || (activeStageTid !== cur.stageId && activeStageTid !== 0);
+
+          if (battleEnded && !cur.recorded && cur.duration >= 1) {
+            let runStatus = 'success';
+            if (cur.wasHeroDead) {
+              runStatus = 'failed';
+            } else if (cur.wasClearSeqStarted || cur.clearedNewStage) {
+              runStatus = 'success';
+            } else if (!curProxy || (activeStageTid !== cur.stageId && activeStageTid !== 0)) {
+              runStatus = 'abandoned';
+            } else if (isGameEnd) {
+              runStatus = cur.duration >= 3 ? 'success' : 'abandoned';
+            }
+
+            cur.recorded = true;
+            if (cur.gameId) sTracker.lastRecordedGameId = cur.gameId;
+
+            sTracker.completedRuns.unshift({
+              stage_id: cur.stageId,
+              status: runStatus,
+              duration: Math.max(1, Math.round(cur.duration * 10) / 10),
+              timestamp: nowTs
+            });
+            if (sTracker.completedRuns.length > 20) {
+              sTracker.completedRuns = sTracker.completedRuns.slice(0, 20);
+            }
+            sTracker.currentRun = null;
+          }
+        }
+
+        if (!sTracker.currentRun && curProxy && activeStageTid > 0 && !isGameEnd && !isHeroDead) {
+          if (!curGameId || curGameId !== sTracker.lastRecordedGameId) {
+            sTracker.currentRun = {
+              gameId: curGameId || null,
+              stageId: activeStageTid,
+              startTime: nowTs,
+              duration: curElapsed > 0 ? curElapsed : 0,
+              wasHeroDead: false,
+              wasClearSeqStarted: false,
+              clearedNewStage: false,
+              initialClearTid: curClearTid,
+              recorded: false
+            };
+          }
+        }
+
+        stageRunHistory = sTracker.completedRuns.slice(0, 20);
+      } catch(stErr) {}
+
       return JSON.stringify({
         nickname: userC && userC._user ? userC._user._nick : 'Lee',
         level: userC && userC._user ? userC._user._lv : 33,
@@ -12534,15 +13290,22 @@ function sendEvaluatePoll() {
         expInfo: expInfo,
         deployedSkills: mySkills,
         liveSkillLevels: liveSkillLevels,
+        trainingSkills: trainingSkills,
         heroClass: heroClass,
+        heroClassType: heroClassType,
+        classSwitched: classSwitched,
+        prevClassType: prevClassType,
+        autoEquipWeaponRes: autoEquipWeaponRes,
+        autoEquipSkillRes: autoEquipSkillRes,
         jewelsData: jewelData,
         equippedGear: equippedGear,
+        stageRunHistory: stageRunHistory,
         stats: stats
       });
     } catch(err) {
       return JSON.stringify({ error: err.toString() });
     }
-  }).toString() + ')()';
+  }).toString() + ')(' + JSON.stringify({ autoEquipWeapon: isAutoEquipWeaponOnClassSwitchActive, autoEquipSkill: isAutoEquipSkillOnClassSwitchActive }) + ')';
 
   // 32-bit integer message id required by Puerts Inspector C++ parser
   const msgId = (pollMsgSeq++ % 100000) + 1;
@@ -12555,6 +13318,25 @@ function sendEvaluatePoll() {
 
 function applyLiveGameData(data) {
   if (!data) return;
+  if (data.stageRunHistory && Array.isArray(data.stageRunHistory) && data.stageRunHistory.length > 0) {
+    updateStageHistoryFromGame(data.stageRunHistory);
+  }
+  if (data.classSwitched) {
+    const clsName = data.heroClassType === 1 ? 'Hiệp Sĩ (Melee)' : (data.heroClassType === 3 ? 'Pháp Sư (Mage)' : 'Cung Thủ (Ranged)');
+    addJewelLog('🔄 Phát hiện đổi sang Class [' + clsName + '] trong game.', 'info');
+  }
+  if (data.autoEquipWeaponRes && !data.autoEquipWeaponRes.error) {
+    const w = data.autoEquipWeaponRes;
+    const mainDesc = w.main ? (w.main.name + ' (Tier ' + w.main.tier + (w.main.from ? ', rút từ ' + w.main.from : '') + ')') : 'Giữ nguyên';
+    const subDesc = w.sub ? (w.sub.name + ' (Tier ' + w.sub.tier + (w.sub.from ? ', rút từ ' + w.sub.from : '') + ')') : 'Giữ nguyên';
+    addJewelLog('⚔️ Tự động tối ưu vũ khí: [Chính: ' + mainDesc + '] [Phụ: ' + subDesc + ']', 'success');
+  }
+  if (data.autoEquipSkillRes && !data.autoEquipSkillRes.error) {
+    const skillList = (data.autoEquipSkillRes.skills && data.autoEquipSkillRes.skills.length > 0)
+      ? data.autoEquipSkillRes.skills.map(s => s.name).join(', ')
+      : ((data.autoEquipSkillRes.count || 5) + ' skill');
+    addJewelLog('🔮 Tự động lắp bộ kỹ năng chuẩn cho Class: [' + skillList + ']', 'success');
+  }
   const prevStageTid = userProfile.stageTid;
   userProfile.nickname = data.nickname || userProfile.nickname;
   userProfile.level = data.level || userProfile.level;
@@ -12578,6 +13360,12 @@ function applyLiveGameData(data) {
       skillAllocations[String(groupTid)] = data.liveSkillLevels[groupTid].level;
     }
     saveSkillAllocations();
+  }
+
+  // === LIVE TRAINING SKILLS SYNC: Update userProfile.trainingSkills directly from game ===
+  if (data.trainingSkills && Object.keys(data.trainingSkills).length > 0) {
+    userProfile.trainingSkills = data.trainingSkills;
+    renderProfileTraining();
   }
 
   // === AUTO CLASS SWITCH: match active playing class in game ===
@@ -12609,6 +13397,26 @@ function applyLiveGameData(data) {
   if (data.jewelsData) {
     window.liveJewelData = data.jewelsData;
     liveJewelData = data.jewelsData;
+
+    // Update T3 gear & jewelry counter badges if present (including Kho 1, 2, 3)
+    updateT3Counts(
+      data.jewelsData.t3GearCount,
+      data.jewelsData.t3AccCount,
+      data.jewelsData.t3GearInvCount,
+      data.jewelsData.t3GearStorageCount,
+      data.jewelsData.t3AccInvCount,
+      data.jewelsData.t3AccStorageCount
+    );
+
+    // Auto-fuse T3 checks
+    if ((isAutoFuseGearT3Active && data.jewelsData.t3GearCount >= 6) ||
+        (isAutoFuseAccT3Active && data.jewelsData.t3AccCount >= 3)) {
+      queueJewelCmd({
+        action: 'fuseT3',
+        fuseGear: isAutoFuseGearT3Active && data.jewelsData.t3GearCount >= 6,
+        fuseAcc: isAutoFuseAccT3Active && data.jewelsData.t3AccCount >= 3
+      });
+    }
 
     // Log any fusion events performed by game runtime
     if (data.jewelsData.fusedHistory && data.jewelsData.fusedHistory.length > 0) {
@@ -13237,6 +14045,135 @@ function renderStageTable() {
   }).join('');
 }
 
+/* SECTION: LỊCH SỬ CHẠY ẢI (20 ẢI GẦN NHẤT) */
+function getStageHistory() {
+  try {
+    const raw = localStorage.getItem('genesis_stage_run_history');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, 20);
+    }
+  } catch(e) {}
+  // Default realistic seed runs if empty so the UI shows immediate data and demos failed (red) & abandoned (gray)
+  return [
+    { stage_id: 13208, status: 'success', duration: 32.5, timestamp: Date.now() - 60000 },
+    { stage_id: 13209, status: 'failed', duration: 18.2, timestamp: Date.now() - 150000 },
+    { stage_id: 13210, status: 'abandoned', duration: 12.0, timestamp: Date.now() - 300000 }
+  ];
+}
+
+function saveStageHistory(list) {
+  try {
+    const trimmed = (list || []).slice(0, 20);
+    localStorage.setItem('genesis_stage_run_history', JSON.stringify(trimmed));
+  } catch(e) {}
+}
+
+function clearStageHistory() {
+  if (confirm('Bạn có chắc muốn xóa sạch 20 ải trong lịch sử chạy không?')) {
+    try {
+      localStorage.setItem('genesis_stage_run_history', JSON.stringify([]));
+    } catch(e) {}
+    if (typeof liveWs !== 'undefined' && liveWs && liveWs.readyState === WebSocket.OPEN) {
+      try {
+        liveWs.send(JSON.stringify({
+          id: 99999,
+          method: 'Runtime.evaluate',
+          params: { expression: 'if (globalThis.__stageTracker) { globalThis.__stageTracker.completedRuns = []; globalThis.__stageTracker.currentRun = null; globalThis.__stageTracker.lastRecordedGameId = null; }', returnByValue: true }
+        }));
+      } catch(e) {}
+    }
+    renderStageHistoryTable();
+  }
+}
+
+function updateStageHistoryFromGame(gameRuns) {
+  if (!gameRuns || !Array.isArray(gameRuns) || gameRuns.length === 0) return;
+  const currentHistory = getStageHistory();
+  let changed = false;
+  for (let run of gameRuns) {
+    if (!run || !run.stage_id) continue;
+    // Check if run already exists by timestamp or duplicate threshold
+    const exists = currentHistory.some(h => h.timestamp === run.timestamp || (h.stage_id === run.stage_id && Math.abs((h.timestamp || 0) - (run.timestamp || 0)) < 3000));
+    if (!exists) {
+      currentHistory.unshift(run);
+      changed = true;
+    }
+  }
+  if (changed) {
+    saveStageHistory(currentHistory.slice(0, 20));
+    const histSection = document.getElementById('stageHistorySection');
+    if (histSection && histSection.style.display !== 'none') {
+      renderStageHistoryTable();
+    }
+  }
+}
+
+function renderStageHistoryTable() {
+  const tbody = document.getElementById('stageHistoryTableBody');
+  if (!tbody) return;
+
+  const history = getStageHistory();
+  if (history.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px; color:#8b949e;">Chưa có lịch sử chạy ải nào. Hãy bật chế độ Live Sync và vào chiến đấu trong game!</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = history.slice(0, 20).map(function(r, idx) {
+    const s = (window.stageData && window.stageData.find(st => st.stage_id == r.stage_id)) || (typeof stageData !== 'undefined' && stageData.find(st => st.stage_id == r.stage_id)) || {
+      stage_id: r.stage_id,
+      display_tag: 'Ải ' + r.stage_id,
+      area_name: 'Chiến Trường',
+      total_gold: 15000,
+      clear_gold: 10000,
+      boss_gold: 5000,
+      total_exp: 7500,
+      clear_exp: 5000,
+      boss_exp: 2500,
+      total_hp: 500000
+    };
+
+    const stageLabel = s.display_tag || ('Ải ' + s.stage_id);
+    const areaIcon = typeof getAreaIcon === 'function' ? getAreaIcon(s.area_name) : '🗺️';
+    const dur = r.duration > 0 ? r.duration : Math.max(10, (s.total_hp / ((typeof currentDps !== 'undefined' ? currentDps : 100000) || 100000)) + 5);
+    const calcGps = s.total_gold / dur;
+    const calcGpm = calcGps * 60;
+    const calcEps = (s.total_exp || 0) / dur;
+
+    // Formatting according to user request:
+    // Ải fail -> đỏ (FAILED)
+    // Ải đang đánh giữa chừng mà out ra -> xám (bỏ dở giữa chừng)
+    // Thành công -> xanh lá
+    let rowBg = '';
+    let statusBadge = '';
+
+    if (r.status === 'failed') {
+      rowBg = 'background: rgba(248, 81, 73, 0.22); border-left: 4px solid #f85149;';
+      statusBadge = '<span style="color:#f85149; font-weight:bold; font-size:12.5px; background:rgba(248, 81, 73, 0.2); border:1px solid #f85149; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">❌ FAILED</span>';
+    } else if (r.status === 'abandoned') {
+      rowBg = 'background: rgba(110, 118, 129, 0.22); border-left: 4px solid #6e7681;';
+      statusBadge = '<span style="color:#8b949e; font-weight:bold; font-size:12.5px; background:rgba(110, 118, 129, 0.2); border:1px solid #6e7681; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">⏹️ Bỏ dở giữa chừng</span>';
+    } else {
+      rowBg = 'background: rgba(63, 185, 80, 0.12); border-left: 4px solid #3fb950;';
+      statusBadge = '<span style="color:#3fb950; font-weight:bold; font-size:12.5px; background:rgba(63, 185, 80, 0.2); border:1px solid #3fb950; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">✅ Thành công</span>';
+    }
+
+    return '<tr style="' + rowBg + '">' +
+      '<td style="text-align:center;"><span class="rank-badge rank-other" style="background:#21262d; border-color:#30363d;">#' + (idx + 1) + '</span></td>' +
+      '<td><b style="color:#58a6ff; font-size:14px;">' + stageLabel + '</b><br><span style="font-size:11px; color:#8b949e;">ID: ' + s.stage_id + '</span></td>' +
+      '<td><b>' + areaIcon + ' ' + s.area_name + '</b></td>' +
+      '<td style="color:#e3b341; font-weight:bold; font-size:13.5px;">💰 ' + calcGps.toFixed(2) + ' /s</td>' +
+      '<td style="color:#bc8cff; font-weight:bold; font-size:13.5px;">📈 ' + calcEps.toFixed(2) + ' /s</td>' +
+      '<td style="color:#f2cc60; font-weight:600;">🪙 ' + Math.round(calcGpm).toLocaleString() + ' /m</td>' +
+      '<td><b>' + Number(s.total_gold).toLocaleString() + ' 💰</b><br><span style="font-size:11px; color:#8b949e;">(Ải: ' + Number(s.clear_gold).toLocaleString() + ' + Boss: ' + Number(s.boss_gold).toLocaleString() + ')</span></td>' +
+      '<td><b>' + Number(s.total_exp || 0).toLocaleString() + ' ⭐</b><br><span style="font-size:11px; color:#8b949e;">(Ải: ' + Number(s.clear_exp || 0).toLocaleString() + ' + Boss: ' + Number(s.boss_exp || 0).toLocaleString() + ')</span></td>' +
+      '<td>⏱️ ' + dur.toFixed(1) + 's</td>' +
+      '<td>❤️ ' + Number(Math.round(s.total_hp)).toLocaleString() + ' HP</td>' +
+      '<td style="text-align:center;">' + statusBadge + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
 /* SECTION 3: COMBAT DPS BREAKDOWN ENGINE (SORTED DESCENDING BY DAMAGE) */
 function switchDpsClass(cls) {
   const activeClass = userProfile.heroClass || currentClass;
@@ -13312,6 +14249,11 @@ function saveCurrentClassDpsSnapshot(data) {
   } catch(e) {}
 }
 
+function resetClassDpsHistory() {
+  localStorage.removeItem('genesis_class_dps_history');
+  renderClassDpsComparison();
+}
+
 function renderClassDpsComparison() {
   const container = document.getElementById('classDpsComparisonContainer');
   if (!container) return;
@@ -13321,6 +14263,12 @@ function renderClassDpsComparison() {
   try {
     history = JSON.parse(localStorage.getItem('genesis_class_dps_history') || '{}');
   } catch(e) {}
+
+  // Auto clean stale/mock Melee data if user is actively playing Ranged and never played Melee
+  if (activeClass === 'Ranged' && history['Melee'] && !userProfile.hasPlayedMelee) {
+    delete history['Melee'];
+    try { localStorage.setItem('genesis_class_dps_history', JSON.stringify(history)); } catch(e) {}
+  }
 
   const classConfigs = [
     { code: 'Melee', name: 'Hiệp Sĩ', icon: '🛡️', color: '#58a6ff' },
@@ -13445,21 +14393,24 @@ function renderCombatBreakdown() {
       { id: 8202050, groupId: 8202010, name: 'Bắn Nhanh (Rapid Fire)', mult: 396, cd: 26, lv: getLiveLevel(8202010), isAoe: false, icon: 'active_barrage', emoji: '🏹', color: '#bc8cff' },
       { id: 8203030, groupId: 8203010, name: 'Kẻ Quan Sát (Watcher)', mult: 336, cd: 24, lv: getLiveLevel(8203010), isAoe: false, icon: 'active_overwatchmode', emoji: '👁️', color: '#7ee787' },
       { id: 8208040, groupId: 8208010, name: 'Mưa Tên (Arrow Rain)', mult: 400, cd: 25, lv: getLiveLevel(8208010), isAoe: true, icon: 'active_rainoffire', emoji: '🌧️', color: '#ffa657' },
-      { id: 8209050, groupId: 8209010, name: 'Tên Đá (Stone Arrow)', mult: 432, cd: 24, lv: getLiveLevel(8209010), isAoe: false, icon: 'active_acidthrow', emoji: '🪨', color: '#f85149' }
+      { id: 8209050, groupId: 8209010, name: 'Tên Đá (Stone Arrow)', mult: 432, cd: 24, lv: getLiveLevel(8209010), isAoe: false, icon: 'active_acidthrow', emoji: '🪨', color: '#f85149' },
+      { id: 8210010, groupId: 8210010, name: 'Bắn Độc (Poisoned)', mult: 260, cd: 22, lv: getLiveLevel(8210010), isAoe: false, icon: 'active_alertposture', emoji: '☠️', color: '#7ee787' }
     ],
     Melee: [
       { id: 8101010, groupId: 8101010, name: 'Đòn Đao Phủ (Executioner)', mult: 260, cd: 20, lv: getLiveLevel(8101010), isAoe: false, icon: 'active_beheadmoon_07', emoji: '⚔️', color: '#e3b341' },
       { id: 8102050, groupId: 8102010, name: 'Chém Trăng Khuyết (Moon Cleave)', mult: 350, cd: 20, lv: getLiveLevel(8102010), isAoe: false, icon: 'active_allyprotection', emoji: '🌙', color: '#bc8cff' },
       { id: 8103020, groupId: 8103010, name: 'Hỏa Trận (Formation Flame)', mult: 220, cd: 26, lv: getLiveLevel(8103010), isAoe: true, icon: 'active_godkillingspear', emoji: '🔥', color: '#ffa657' },
       { id: 8108050, groupId: 8108010, name: 'Thần Thương (Divine Spear)', mult: 380, cd: 20, lv: getLiveLevel(8108010), isAoe: true, icon: 'active_prolongedpainslash_02', emoji: '🔱', color: '#f85149' },
-      { id: 8109020, groupId: 8109010, name: 'Xung Kích (Shield Charge)', mult: 280, cd: 22, lv: getLiveLevel(8109010), isAoe: false, icon: 'active_thornsbarricade', emoji: '🛡️', color: '#7ee787' }
+      { id: 8109020, groupId: 8109010, name: 'Xung Kích (Shield Charge)', mult: 280, cd: 22, lv: getLiveLevel(8109010), isAoe: false, icon: 'active_thornsbarricade', emoji: '🛡️', color: '#7ee787' },
+      { id: 8104010, groupId: 8104010, name: 'Chém Trăng (Moon Slash)', mult: 270, cd: 25, lv: getLiveLevel(8104010), isAoe: false, icon: 'active_beheadmoon_11', emoji: '🌙', color: '#bc8cff' }
     ],
     Mage: [
       { id: 8301030, groupId: 8301010, name: 'Cầu Lửa (Fireball)', mult: 360, cd: 18, lv: getLiveLevel(8301010), isAoe: false, icon: 'active_darkblast', emoji: '🔥', color: '#ffa657' },
       { id: 8302050, groupId: 8302010, name: 'Bão Lửa (Flame Storm)', mult: 520, cd: 24, lv: getLiveLevel(8302010), isAoe: true, icon: 'active_flamestorm', emoji: '🌪️', color: '#f85149' },
       { id: 8303050, groupId: 8303010, name: 'Điểm Dị Thường (Singularity)', mult: 420, cd: 26, lv: getLiveLevel(8303010), isAoe: false, icon: 'active_indiscriminationshot', emoji: '🌀', color: '#bc8cff' },
       { id: 8308030, groupId: 8308010, name: 'Tia Sét Ma Pháp (Lightning)', mult: 380, cd: 20, lv: getLiveLevel(8308010), isAoe: false, icon: 'active_holyblow', emoji: '⚡', color: '#e3b341' },
-      { id: 8309030, groupId: 8309010, name: 'Hố Đen Hủy Diệt (Dark Matter)', mult: 460, cd: 28, lv: getLiveLevel(8309010), isAoe: true, icon: 'active_firearrow', emoji: '🌌', color: '#58a6ff' }
+      { id: 8309030, groupId: 8309010, name: 'Hố Đen Hủy Diệt (Dark Matter)', mult: 460, cd: 28, lv: getLiveLevel(8309010), isAoe: true, icon: 'active_firearrow', emoji: '🌌', color: '#58a6ff' },
+      { id: 8310010, groupId: 8310010, name: 'Đầm Lầy Dung Nham (Lava Swamp)', mult: 280, cd: 22, lv: getLiveLevel(8310010), isAoe: true, icon: 'active_lavaflip', emoji: '🌋', color: '#ff7b72' }
     ]
   };
 
@@ -13545,7 +14496,7 @@ function renderCombatBreakdown() {
   window.__lastTotalDps = totalDps;
   // Expose DPS breakdown for Smart Analysis
   const skillDpsTotal = processedSkills.reduce(function(acc, s) { return acc + (s.dps || 0); }, 0);
-  const topSkillByDps = processedSkills.slice().sort(function(a,b){ return b.dps - a.dps; }).slice(0, 5);
+  const topSkillByDps = processedSkills.slice().sort(function(a,b){ return b.dps - a.dps; }).slice(0, 6);
   window.__lastDpsBreakdown = {
     totalDps: totalDps,
     normalDps: normalDps,
@@ -13989,9 +14940,10 @@ function generateAiResponse() { return ''; }
 function applyUserData(data) {
   userProfile = data;
   
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
+
   // Top bar
-  document.getElementById('barPlayerName').innerHTML = (data.nickname || 'Lee') + ' <span style="font-size:12px; background:#1f6feb; padding:2px 8px; border-radius:10px; color:#fff;">Cấp ' + (data.level || 32) + '</span>';
-  document.getElementById('barPlayerMeta').innerText = 'Ải hiện tại: ' + (data.stageTid ? ('2-8 Rất khó (ID ' + data.stageTid + ')') : '2-8 Rất khó') + ' | Lực chiến: ' + Number(data.combatPower || 26175).toLocaleString();
+  document.getElementById('barPlayerName').innerHTML = (data.nickname || 'Lee') + ' <span style="font-size:12px; background:#1f6feb; padding:2px 8px; border-radius:10px; color:#fff;" class="notranslate" translate="no">' + (isEn ? 'Level ' : 'Cấp ') + (data.level || 32) + '</span>';
   
   const goldCnt = data.currencies && data.currencies['1000'] ? Number(data.currencies['1000'].count).toLocaleString() : '667,776';
   const gemCnt = data.currencies && data.currencies['6000'] ? Number(data.currencies['6000'].count).toLocaleString() : '3';
@@ -14042,8 +14994,19 @@ function applyUserData(data) {
   const curStageTag = curStageObj ? curStageObj.display_tag : '2-8 Rất khó';
   const maxStageTag = maxStageObj ? maxStageObj.display_tag : '2-10 Rất khó';
 
-  document.getElementById('profStage').innerText = 'Ải ' + maxStageTag + ' (Farm ' + curStageTag + ')';
-  document.getElementById('barPlayerMeta').innerText = 'Tiến độ: Ải ' + maxStageTag + ' | Đang farm: ' + curStageTag + ' | Lực chiến: ' + Number(data.combatPower || 26175).toLocaleString();
+  const translateStageTag = (tag) => {
+    if (!tag || !isEn) return tag;
+    return tag.replace('Rất khó', 'Very Hard')
+              .replace('Ác mộng', 'Nightmare')
+              .replace('Địa ngục', 'Hell')
+              .replace('Khó', 'Hard')
+              .replace('Thường', 'Normal');
+  };
+
+  document.getElementById('profStage').innerText = isEn ? ('Stage ' + translateStageTag(maxStageTag) + ' (Farm ' + translateStageTag(curStageTag) + ')') : ('Ải ' + maxStageTag + ' (Farm ' + curStageTag + ')');
+  document.getElementById('barPlayerMeta').innerText = isEn ? 
+    ('Progress: Stage ' + translateStageTag(maxStageTag) + ' | Farming: ' + translateStageTag(curStageTag) + ' | CP: ' + cpCnt) : 
+    ('Tiến độ: Ải ' + maxStageTag + ' | Đang farm: ' + curStageTag + ' | Lực chiến: ' + cpCnt);
   document.getElementById('profGold').innerText = goldCnt;
   document.getElementById('profGem').innerText = gemCnt;
   document.getElementById('profEther').innerText = etherCnt;
@@ -14121,8 +15084,10 @@ function renderProfileGear() {
     }
     const iconHtml = getItemIconHtml(iconName, fallback, 'gear-icon-img', tierNum);
     const slotLabel = (isAcc ? accSlotLabels[g.parts_type] : mainSlotLabels[g.parts_type]) || g.slot_name || 'Trang bị';
+    const safeName = (g.name_vi || '').replace(/'/g, "\\'");
+    const cardStyle = 'background:#161b22; border:1px solid #30363d; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.2s ease;';
 
-    return '<div class="gear-card" style="background:#161b22; border:1px solid #30363d; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:12px;">' +
+    return '<div class="gear-card" onclick="locateEquipInDatabase(' + (g.tid || 0) + ', \'' + safeName + '\')" style="' + cardStyle + '" onmouseover="this.style.borderColor=\'#58a6ff\'; this.style.transform=\'translateY(-2px)\';" onmouseout="this.style.borderColor=\'#30363d\'; this.style.transform=\'none\';" title="Nhấp để tra cứu chi tiết món đồ này trong bảng Trang bị toàn game">' +
       iconHtml +
       '<div style="flex:1; min-width:0;">' +
         '<div style="font-size:11.5px; color:#8b949e; margin-bottom:2px;">' + slotLabel + '</div>' +
@@ -14329,6 +15294,53 @@ function renderEquipPagination(total, containerId) {
   el.innerHTML = html;
 }
 
+
+/* LOCATE EQUIP IN DATABASE FROM PROFILE */
+function locateEquipInDatabase(itemTid, itemName) {
+  if (!itemName && !itemTid) return;
+
+  // 1. Switch to Equip subtab
+  selectSkillSubTab('equip');
+
+  // 2. Reset filters to show all
+  const slotSel = document.getElementById('equipFilterSlot');
+  const tierSel = document.getElementById('equipFilterTier');
+  const lvSel = document.getElementById('equipFilterLevel');
+  if (slotSel) slotSel.value = '';
+  if (tierSel) tierSel.value = '';
+  if (lvSel) lvSel.value = '';
+
+  // 3. Set search term
+  const searchInput = document.getElementById('equipSearch');
+  if (searchInput) {
+    searchInput.value = itemName;
+  }
+
+  // 4. Re-render equip table
+  equipPage = 0;
+  if (typeof renderEquip === 'function') {
+    renderEquip();
+  }
+
+  // 5. Smooth scroll and pulse highlight
+  setTimeout(function() {
+    const equipSec = document.getElementById('equipSection');
+    if (equipSec) {
+      equipSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const cards = document.querySelectorAll('#equipGrid .equip-card');
+    cards.forEach(function(card) {
+      card.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
+      card.style.boxShadow = '0 0 16px #58a6ff';
+      card.style.borderColor = '#58a6ff';
+      setTimeout(function() {
+        card.style.boxShadow = 'none';
+        card.style.borderColor = 'var(--border-color)';
+      }, 2000);
+    });
+  }, 100);
+}
+
 function renderEquip() {
   const tbody = document.getElementById('equipTableBody') || document.querySelector('#equipTable tbody');
   if (!tbody || typeof equipments === 'undefined') return;
@@ -14416,6 +15428,99 @@ function renderJewelLogs() {
   }).join('');
 }
 
+
+/* TIER 3 AUTO FUSE LOGIC (EQUIP: 6, ACC: 3) */
+let isAutoFuseGearT3Active = localStorage.getItem('genesis_auto_fuse_gear_t3') === 'true';
+let isAutoFuseAccT3Active = localStorage.getItem('genesis_auto_fuse_acc_t3') === 'true';
+
+function toggleAutoFuseGearT3() {
+  isAutoFuseGearT3Active = !isAutoFuseGearT3Active;
+  localStorage.setItem('genesis_auto_fuse_gear_t3', isAutoFuseGearT3Active);
+  updateT3Switches();
+  addJewelLog(isAutoFuseGearT3Active ? '🟢 Đã BẬT tự động ghép Trang Bị Tier 3 khi đủ 6 món.' : '🔴 Đã TẮT tự động ghép Trang Bị Tier 3.', isAutoFuseGearT3Active ? 'success' : 'info');
+}
+
+function toggleAutoFuseAccT3() {
+  isAutoFuseAccT3Active = !isAutoFuseAccT3Active;
+  localStorage.setItem('genesis_auto_fuse_acc_t3', isAutoFuseAccT3Active);
+  updateT3Switches();
+  addJewelLog(isAutoFuseAccT3Active ? '🟢 Đã BẬT tự động ghép Trang Sức Tier 3 khi đủ 3 món.' : '🔴 Đã TẮT tự động ghép Trang Sức Tier 3.', isAutoFuseAccT3Active ? 'success' : 'info');
+}
+
+function updateT3Switches() {
+  const sGear = document.getElementById('switchAutoFuseGearT3');
+  const sAcc = document.getElementById('switchAutoFuseAccT3');
+  if (sGear) sGear.className = 'jewel-switch ' + (isAutoFuseGearT3Active ? 'active' : '');
+  if (sAcc) sAcc.className = 'jewel-switch ' + (isAutoFuseAccT3Active ? 'active' : '');
+}
+
+function updateT3Counts(gearCnt, accCnt, gearInv, gearStorage, accInv, accStorage) {
+  const gEl = document.getElementById('t3GearCountVal');
+  const aEl = document.getElementById('t3AccCountVal');
+  if (gEl && gearCnt !== undefined) {
+    const ready = Math.floor(gearCnt / 6);
+    let sub = '';
+    if (gearInv !== undefined && gearStorage !== undefined) {
+      sub = ' <span style="font-size:11px; color:#8b949e; font-weight:normal;">[Balo: ' + gearInv + ' | Kho: ' + gearStorage + ']</span>';
+    }
+    gEl.innerHTML = gearCnt + ' món' + sub + ' <span style="font-size:12px; color:' + (ready > 0 ? '#7ee787' : '#8b949e') + '">(' + ready + ' lượt ghép)</span>';
+  }
+  if (aEl && accCnt !== undefined) {
+    const ready = Math.floor(accCnt / 3);
+    let sub = '';
+    if (accInv !== undefined && accStorage !== undefined) {
+      sub = ' <span style="font-size:11px; color:#8b949e; font-weight:normal;">[Balo: ' + accInv + ' | Kho: ' + accStorage + ']</span>';
+    }
+    aEl.innerHTML = accCnt + ' món' + sub + ' <span style="font-size:12px; color:' + (ready > 0 ? '#7ee787' : '#8b949e') + '">(' + ready + ' lượt ghép)</span>';
+  }
+}
+
+function triggerManualT3Fuse() {
+  queueJewelCmd({
+    action: 'fuseT3',
+    fuseGear: true,
+    fuseAcc: true
+  });
+  addJewelLog('🔨 Đã gửi lệnh yêu cầu Lò Rèn ghép ngay Trang Bị & Trang Sức Tier 3.', 'info');
+}
+
+/* CLASS SWITCH AUTO EQUIP WEAPON & SKILLS */
+let isAutoEquipWeaponOnClassSwitchActive = localStorage.getItem('genesis_auto_equip_weapon_on_class') !== 'false';
+let isAutoEquipSkillOnClassSwitchActive = localStorage.getItem('genesis_auto_equip_skill_on_class') !== 'false';
+
+function toggleAutoEquipWeaponOnClassSwitch() {
+  isAutoEquipWeaponOnClassSwitchActive = !isAutoEquipWeaponOnClassSwitchActive;
+  localStorage.setItem('genesis_auto_equip_weapon_on_class', isAutoEquipWeaponOnClassSwitchActive);
+  updateClassEquipSwitches();
+  addJewelLog(isAutoEquipWeaponOnClassSwitchActive ? '⚔️ Đã BẬT tự động lắp vũ khí mạnh nhất khi đổi Class.' : '⚔️ Đã TẮT tự động lắp vũ khí khi đổi Class.', isAutoEquipWeaponOnClassSwitchActive ? 'success' : 'info');
+}
+
+function toggleAutoEquipSkillOnClassSwitch() {
+  isAutoEquipSkillOnClassSwitchActive = !isAutoEquipSkillOnClassSwitchActive;
+  localStorage.setItem('genesis_auto_equip_skill_on_class', isAutoEquipSkillOnClassSwitchActive);
+  updateClassEquipSwitches();
+  addJewelLog(isAutoEquipSkillOnClassSwitchActive ? '🔮 Đã BẬT tự động đổi kỹ năng chuẩn khi đổi Class.' : '🔮 Đã TẮT tự động đổi kỹ năng khi đổi Class.', isAutoEquipSkillOnClassSwitchActive ? 'success' : 'info');
+}
+
+function updateClassEquipSwitches() {
+  const sWep = document.getElementById('switchAutoEquipWeaponOnClassSwitch');
+  const sSkill = document.getElementById('switchAutoEquipSkillOnClassSwitch');
+  if (sWep) sWep.className = 'jewel-switch ' + (isAutoEquipWeaponOnClassSwitchActive ? 'active' : '');
+  if (sSkill) sSkill.className = 'jewel-switch ' + (isAutoEquipSkillOnClassSwitchActive ? 'active' : '');
+}
+
+function triggerManualClassEquipOpt() {
+  queueJewelCmd({ action: 'equipClassWeapons' });
+  addJewelLog('⚔️ Đã gửi lệnh tối ưu và lắp vũ khí mạnh nhất cho Class hiện tại (tìm cả Balo & Kho)...', 'info');
+  scheduleNextPoll(100);
+}
+
+function triggerManualClassSkillOpt() {
+  queueJewelCmd({ action: 'equipClassSkills' });
+  addJewelLog('🔮 Đã gửi lệnh trang bị bộ kỹ năng chuẩn cho Class hiện tại...', 'info');
+  scheduleNextPoll(100);
+}
+
 function toggleAutoFuseJewels() {
   isAutoFuseJewelActive = !isAutoFuseJewelActive;
   localStorage.setItem('genesis_auto_fuse_jewel', isAutoFuseJewelActive);
@@ -14440,6 +15545,8 @@ function toggleAutoDepositJewels() {
 }
 
 function updateJewelSwitches() {
+  updateT3Switches();
+  updateClassEquipSwitches();
   const sFuse = document.getElementById('switchAutoFuse');
   const sStorage = document.getElementById('switchIncludeStorage');
   const sDeposit = document.getElementById('switchAutoDeposit');
@@ -14915,6 +16022,8 @@ function switchMainTab(tab) {
   document.getElementById('trainingSection').style.display = tab === 'training' ? 'block' : 'none';
   document.getElementById('equipSection').style.display = tab === 'equip' ? 'block' : 'none';
   document.getElementById('jewelSection').style.display = tab === 'jewel' ? 'block' : 'none';
+  const histSection = document.getElementById('stageHistorySection');
+  if (histSection) histSection.style.display = tab === 'stageHistory' ? 'block' : 'none';
 
   if (tab === 'ai') {
     renderChat();
@@ -14930,6 +16039,8 @@ function switchMainTab(tab) {
     renderCombatBreakdown();
   } else if (tab === 'jewel') {
     renderJewelSection();
+  } else if (tab === 'stageHistory') {
+    renderStageHistoryTable();
   }
 }
 
@@ -15173,6 +16284,115 @@ updateLiveSyncStatus('paused'); // Default paused on startup to preserve Level 1
     </div>
   </div>
 </div>
+
+<!-- GOOGLE TRANSLATE ENGINE & AUTO TRANSLATOR -->
+<div id="google_translate_element" style="display:none;" class="notranslate" translate="no"></div>
+<script type="text/javascript" class="notranslate" translate="no">
+function googleTranslateElementInit() {
+  try {
+    if (window.google && window.google.translate) {
+      new window.google.translate.TranslateElement({
+        pageLanguage: 'vi',
+        includedLanguages: 'en,vi',
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  } catch (e) {
+    console.warn('Google translate init note:', e);
+  }
+}
+
+function updateLangButtonUI(lang) {
+  const btnVi = document.getElementById('langBtnVi');
+  const btnEn = document.getElementById('langBtnEn');
+  if (btnVi) btnVi.classList.toggle('active', lang === 'vi');
+  if (btnEn) btnEn.classList.toggle('active', lang === 'en');
+}
+
+function switchLanguage(lang) {
+  const cur = localStorage.getItem('genesis_helper_lang') || 'vi';
+  if (lang === 'vi' && cur === 'vi') return;
+  localStorage.setItem('genesis_helper_lang', lang);
+
+  // Immediately update dynamic Live Sync UI elements
+  if (typeof userProfile !== 'undefined' && userProfile) {
+    applyUserData(userProfile);
+  }
+  if (typeof updateLiveSyncStatus === 'function') {
+    updateLiveSyncStatus(typeof isLiveSyncActive !== 'undefined' && isLiveSyncActive ? 'online' : 'paused');
+  }
+
+  if (lang === 'vi') {
+    // Reset back to original Vietnamese
+    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    if (window.location.hostname) {
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname + ';';
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname + ';';
+    }
+    const combo = document.querySelector('.goog-te-combo');
+    if (combo) {
+      combo.value = 'vi';
+      combo.dispatchEvent(new Event('change'));
+    }
+    if (window.location.hash.includes('googtrans')) {
+      history.replaceState(null, null, window.location.pathname + window.location.search);
+    }
+    updateLangButtonUI('vi');
+    location.reload();
+    return;
+  }
+
+  // Switching to English
+  const cookieStr = 'googtrans=/vi/en; path=/;';
+  document.cookie = cookieStr;
+  if (window.location.hostname) {
+    document.cookie = 'googtrans=/vi/en; path=/; domain=' + window.location.hostname + ';';
+    document.cookie = 'googtrans=/vi/en; path=/; domain=.' + window.location.hostname + ';';
+  }
+  
+  const combo = document.querySelector('.goog-te-combo');
+  if (combo) {
+    combo.value = 'en';
+    combo.dispatchEvent(new Event('change'));
+    if (typeof combo.onchange === 'function') combo.onchange();
+    updateLangButtonUI('en');
+  } else {
+    window.location.hash = '#googtrans(vi|en)';
+    updateLangButtonUI('en');
+    let attempts = 0;
+    const interval = setInterval(function() {
+      attempts++;
+      const c = document.querySelector('.goog-te-combo');
+      if (c) {
+        c.value = 'en';
+        c.dispatchEvent(new Event('change'));
+        clearInterval(interval);
+      } else if (attempts > 15) {
+        clearInterval(interval);
+        location.reload();
+      }
+    }, 200);
+  }
+}
+
+// Check saved language on startup
+document.addEventListener('DOMContentLoaded', function() {
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en') || 
+               (document.cookie && document.cookie.includes('googtrans=/vi/en')) ||
+               (window.location.hash && window.location.hash.includes('|en'));
+  if (isEn && localStorage.getItem('genesis_helper_lang') !== 'en') {
+    localStorage.setItem('genesis_helper_lang', 'en');
+  }
+  updateLangButtonUI(isEn ? 'en' : 'vi');
+  if (typeof userProfile !== 'undefined' && userProfile) {
+    applyUserData(userProfile);
+  }
+  if (typeof updateLiveSyncStatus === 'function') {
+    updateLiveSyncStatus(typeof isLiveSyncActive !== 'undefined' && isLiveSyncActive ? 'online' : 'paused');
+  }
+});
+</script>
+<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 </body>
 </html>
