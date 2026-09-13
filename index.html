@@ -1067,6 +1067,7 @@ body {
       <div class="stage-control-group">
         <label>🔍 Phạm Vi Ải:</label>
         <select class="filter-select" id="stageScopeSelect" onchange="renderStageTable()">
+          <option value="history">🏆 Xếp hạng theo Lịch sử chạy (Đo đạc thực tế)</option>
           <option value="unlocked">Chỉ hiện Ải đã mở khóa (≤ Ải 2-10 Rất khó)</option>
           <option value="all">Toàn bộ 400 ải trong Game</option>
         </select>
@@ -1149,7 +1150,7 @@ body {
       <table id="stageHistoryTable">
         <thead>
           <tr>
-            <th style="width:55px; text-align:center;"># Lượt</th>
+            <th style="width:70px; text-align:center;"># Lượt</th>
             <th>🗺️ Ải Trong Game</th>
             <th>🌲 Khu Vực</th>
             <th style="color:#e3b341;">💰 Vàng / Giây</th>
@@ -12472,7 +12473,7 @@ function sendEvaluatePoll() {
 
   const code = '(' + (async function(cfg) {
     try {
-      let userC, stageC, treeC, itemC, sUser, sCombat, sContent;
+      let userC, stageC, treeC, itemC, sUser, sCombat, sContent, sTree;
       for (let [k, v] of nn.netData._mapContainer.entries()) {
         const name = k.name || k.toString();
         if (name === 'NetContainerUser') userC = v;
@@ -12485,6 +12486,7 @@ function sendEvaluatePoll() {
         if (name === 'ServiceUser') sUser = v;
         if (name === 'ServiceCombat') sCombat = v;
         if (name === 'ServiceContentState') sContent = v;
+        if (name === 'ServiceTree') sTree = v;
       }
 
       const currencies = {};
@@ -12546,7 +12548,7 @@ function sendEvaluatePoll() {
         }
       } catch(e){}
 
-      // === LIVE SKILL TREE & TRAINING SKILLS: read actual levels from NetContainerTree ===
+      // === LIVE SKILL TREE & TRAINING SKILLS: read actual levels from NetContainerTree & ServiceTree ===
       const liveSkillLevels = {};
       const trainingSkills = {};
       try {
@@ -12556,24 +12558,30 @@ function sendEvaluatePoll() {
           if (k === 1) treeType1 = v;
           if (k === 4) treeType4 = v;
         }
-        // Training skills (Category 1)
+        // Training skills (Category 1) - directly query true reached level from ServiceTree
         if (treeType1 && treeType1._dicValue) {
           for (let [groupTid, treeInfo] of treeType1._dicValue.entries()) {
             const treeTid = treeInfo._treeTid;
-            const level = Math.round((treeTid - groupTid) / 10) + 1;
+            const reachedLv = sTree ? sTree.getReachedLevel(1, groupTid) : 0;
+            const level = reachedLv > 0 ? reachedLv : (treeTid > groupTid ? (treeTid - groupTid) : (treeTid % 100));
             trainingSkills[groupTid] = { tid: treeTid, level: level };
           }
         } else if (treeType1 && treeType1.keys) {
           for (let sk of treeType1.keys()) {
             const node = treeType1.getValue(sk);
-            if (node) trainingSkills[sk] = { tid: node._treeTid, level: (node._treeTid % 100) };
+            if (node) {
+              const reachedLv = sTree ? sTree.getReachedLevel(1, sk) : 0;
+              const level = reachedLv > 0 ? reachedLv : (node._treeTid > sk ? (node._treeTid - sk) : (node._treeTid % 100));
+              trainingSkills[sk] = { tid: node._treeTid, level: level };
+            }
           }
         }
         // Active skill tree (Category 4)
         if (treeType4 && treeType4._dicValue) {
           for (let [groupTid, treeInfo] of treeType4._dicValue.entries()) {
             const treeTid = treeInfo._treeTid;
-            const level = Math.round((treeTid - groupTid) / 10) + 1;
+            const reachedLv = sTree ? sTree.getReachedLevel(4, groupTid) : 0;
+            const level = reachedLv > 0 ? reachedLv : (treeTid > groupTid ? (Math.floor((treeTid - groupTid) / 10) + 1) : 1);
             liveSkillLevels[groupTid] = { treeTid: treeTid, level: level };
           }
         }
@@ -12890,31 +12898,23 @@ function sendEvaluatePoll() {
           const name = k.name || k.toString();
           if (name === 'ServiceWorkshop') sWorkshop = v;
           if (name === 'ServiceStorage') sStorage = v;
-          if (name === 'ServiceEquip') sEquip = v;
+          if (name === 'ServiceEquipment' || name === 'ServiceEquip') sEquip = v;
         }
 
         const resolveItemLevel = (itemTid, itemId) => {
           try {
-            if (sEquip && typeof sEquip.getEquipLimitLevel === 'function') {
-              const lv = sEquip.getEquipLimitLevel(itemTid, itemId);
-              if (lv > 0) return lv;
+            if (sWorkshop && typeof sWorkshop.getTableInfo === 'function') {
+              const info = sWorkshop.getTableInfo(itemTid, itemId);
+              if (info && info.baseLimitLevel > 0) return info.baseLimitLevel;
             }
           } catch(e) {}
           try {
             const dbEq = nn.db.equip.get(itemTid);
-            if (dbEq) {
-              if (dbEq.BaseLimitLevel !== undefined) return dbEq.BaseLimitLevel;
-              if (dbEq.ReqUserLevel !== undefined) return dbEq.ReqUserLevel;
-              if (dbEq.LimitLevel !== undefined) return dbEq.LimitLevel;
-              if (dbEq.EquipLevel !== undefined) return dbEq.EquipLevel;
-              if (dbEq.LevelLimit !== undefined) return dbEq.LevelLimit;
-            }
+            if (dbEq && dbEq.LimitLevel !== undefined) return dbEq.LimitLevel;
           } catch(e) {}
           try {
-            if (typeof equipments !== 'undefined' && Array.isArray(equipments)) {
-              const eq = equipments.find(e => e.id === itemTid);
-              if (eq && eq.level_req !== undefined) return eq.level_req;
-            }
+            const dbIt = nn.db.item.get(itemTid);
+            if (dbIt && dbIt.LimitLevel !== undefined) return dbIt.LimitLevel;
           } catch(e) {}
           return 1;
         };
@@ -12969,78 +12969,93 @@ function sendEvaluatePoll() {
             // Ensure fusion allows storage candidates (Kho 1, 2, 3)
             sWorkshop.setAutoRegisterIncludeStorage('Fusion', true);
 
+            // Helper function to collect clean candidate items for Gear (contentType=1) or Accessories (contentType=2)
+            const collectT3Candidates = (targetContentType) => {
+              return sWorkshop.collectAutoRegisterCandidates(
+                'Fusion',
+                (itemTid, itemId) => {
+                  const live = nn.net.data.item.getItemNotStackUniqueId(itemId);
+                  if (!live || live.isLock) return false;
+                  if (nn.services.itemMove.isEquippedItemId(itemId)) return false;
+                  if (nn.services.steamMarket?.staging?.isStaged(itemId)) return false;
+                  return true;
+                },
+                true,
+                { rating: 3 }
+              ).filter(c => {
+                if (c.ratingType !== 3) return false;
+                const info = sWorkshop.getTableInfo(c.itemTid, c.itemId);
+                return info && info.contentType === targetContentType;
+              }).map(c => {
+                c._itemLevel = c.baseLimitLevel || resolveItemLevel(c.itemTid, c.itemId) || 1;
+                return c;
+              });
+            };
+
             // Fuse Tier 3 Gear (requires 6 items from Balo or Kho 1, 2, 3)
             if (cmd.fuseGear) {
               sWorkshop.setFusionContentType(1); // 1 = Gear
               sWorkshop.setAutoRegisterRating('Fusion', 3); // Tier 3
               const isSameLv = cmd.sameLevelOnly !== undefined ? cmd.sameLevelOnly : (cfg && cfg.sameLevelOnly);
               let loopGuard = 0;
-              while (loopGuard < 10) {
-                // Collect candidate Tier 3 items from Balo and Kho 1, 2, 3
-                const rawCandidates = sWorkshop.collectAutoRegisterCandidates(
-                  'Fusion',
-                  (itemTid, itemId) => !sWorkshop.isFusionStaged(itemId) && sWorkshop.canStageFusionItem(itemTid, itemId),
-                  true,
-                  { rating: 3 }
-                ).filter(c => c.ratingType === 3);
+              while (loopGuard < 20) {
+                const candidates = collectT3Candidates(1);
+                if (candidates.length < 6) break;
 
-                if (rawCandidates.length < 6) break;
-
-                let candidates = rawCandidates;
-                let targetTable = null;
-
+                let selectedItems = null;
                 if (isSameLv) {
                   const byLevel = new Map();
-                  for (let c of rawCandidates) {
-                    const lv = resolveItemLevel(c.itemTid, c.itemId);
-                    c._itemLevel = lv;
+                  for (let c of candidates) {
+                    const lv = c._itemLevel;
                     if (!byLevel.has(lv)) byLevel.set(lv, []);
                     byLevel.get(lv).push(c);
                   }
-                  let selectedGroup = null;
                   const sortedLevels = Array.from(byLevel.keys()).sort((a, b) => b - a);
                   for (let lv of sortedLevels) {
                     const grp = byLevel.get(lv);
                     if (grp.length >= 6) {
-                      selectedGroup = grp;
+                      selectedItems = grp.slice(0, 6);
                       break;
                     }
                   }
-                  if (!selectedGroup) break; // No group has 6 items of the SAME level! Stop fusing!
-                  candidates = selectedGroup.slice(0, 6);
-                }
-
-                for (let c of candidates) {
-                  const ft = sWorkshop.resolveFusionTableByItem(c.itemTid, c.itemId);
-                  if (ft && ft.MaterialRating === 3) {
-                    targetTable = ft;
-                    break;
-                  }
-                }
-                if (targetTable) {
-                  sWorkshop.clearFusionStaging();
-                  sWorkshop.lockFusionTable(targetTable);
-                  sWorkshop.fillFusionSlots(targetTable, candidates);
-                } else if (!isSameLv) {
-                  sWorkshop.autoRegisterFusion();
+                  if (!selectedItems) break; // No level group has 6 items!
                 } else {
+                  selectedItems = candidates.slice(0, 6);
+                }
+
+                const maxLv = Math.max(...selectedItems.map(i => i._itemLevel || 1));
+                const targetTable = sWorkshop.findFusionTable(1, 3, maxLv);
+                if (!targetTable) break;
+
+                const materials = selectedItems.map(i => ({
+                  itemId: i.itemId,
+                  itemTid: i.itemTid,
+                  itemCnt: 1
+                }));
+
+                if (!sWorkshop.validateFusionMaterials(targetTable, materials)) {
                   break;
                 }
 
-                if (!sWorkshop.isFusionStagingFull()) {
-                  sWorkshop.clearFusionStaging();
-                  break;
-                }
-                const fusionRes = await sWorkshop.reqFusionStagedAsync();
-                if (fusionRes && fusionRes.length > 0) {
+                sWorkshop.clearFusionStaging();
+                const fusionRes = await sWorkshop.reqFusionAsync(targetTable.FusionID, materials);
+                if (fusionRes && (fusionRes.NetResult === 0 || !fusionRes.NetResult || fusionRes.Data)) {
                   loopGuard++;
-                  const rTid = fusionRes[0].tid;
-                  const rInfo = nn.db.equip.get(rTid) || nn.db.item.get(rTid);
-                  const rLoc = nn.db.locale.get(rInfo?.ItemName);
-                  const rName = rLoc?.VI || rLoc?.EN || rInfo?.ItemName || ('Trang bị TID ' + rTid);
-                  jewelData.fusedHistory.push('🛡️ Ghép T3 (Balo & Kho): ' + rName);
+                  let rName = '';
+                  try {
+                    if (fusionRes.Data) {
+                      const rewards = sWorkshop.buildFusionRewards(fusionRes.Data, 1);
+                      if (rewards && rewards.length > 0) {
+                        const rTid = rewards[0].tid;
+                        const rInfo = nn.db.equip.get(rTid) || nn.db.item.get(rTid);
+                        const rLoc = nn.db.locale.get(rInfo?.ItemName);
+                        rName = rLoc?.VI || rLoc?.EN || rInfo?.ItemName || ('Trang bị TID ' + rTid);
+                      }
+                    }
+                  } catch(e) {}
+                  jewelData.fusedHistory.push('🛡️ Ghép T3 (Balo & Kho): ' + (rName || 'Thành công'));
+                  nn.msgBroker.publish('onUpdateWorkShopFusion');
                 } else {
-                  sWorkshop.clearFusionStaging();
                   break;
                 }
               }
@@ -13051,72 +13066,64 @@ function sendEvaluatePoll() {
               sWorkshop.setAutoRegisterRating('Fusion', 3); // Tier 3
               const isSameLv = cmd.sameLevelOnly !== undefined ? cmd.sameLevelOnly : (cfg && cfg.sameLevelOnly);
               let loopGuard = 0;
-              while (loopGuard < 10) {
-                // Collect candidate Tier 3 accessories from Balo and Kho 1, 2, 3
-                const rawCandidates = sWorkshop.collectAutoRegisterCandidates(
-                  'Fusion',
-                  (itemTid, itemId) => !sWorkshop.isFusionStaged(itemId) && sWorkshop.canStageFusionItem(itemTid, itemId),
-                  true,
-                  { rating: 3 }
-                ).filter(c => c.ratingType === 3);
+              while (loopGuard < 20) {
+                const candidates = collectT3Candidates(2);
+                if (candidates.length < 3) break;
 
-                if (rawCandidates.length < 3) break;
-
-                let candidates = rawCandidates;
-                let targetTable = null;
-
+                let selectedItems = null;
                 if (isSameLv) {
                   const byLevel = new Map();
-                  for (let c of rawCandidates) {
-                    const lv = resolveItemLevel(c.itemTid, c.itemId);
-                    c._itemLevel = lv;
+                  for (let c of candidates) {
+                    const lv = c._itemLevel;
                     if (!byLevel.has(lv)) byLevel.set(lv, []);
                     byLevel.get(lv).push(c);
                   }
-                  let selectedGroup = null;
                   const sortedLevels = Array.from(byLevel.keys()).sort((a, b) => b - a);
                   for (let lv of sortedLevels) {
                     const grp = byLevel.get(lv);
                     if (grp.length >= 3) {
-                      selectedGroup = grp;
+                      selectedItems = grp.slice(0, 3);
                       break;
                     }
                   }
-                  if (!selectedGroup) break; // No group has 3 accessories of the SAME level! Stop fusing!
-                  candidates = selectedGroup.slice(0, 3);
-                }
-
-                for (let c of candidates) {
-                  const ft = sWorkshop.resolveFusionTableByItem(c.itemTid, c.itemId);
-                  if (ft && ft.MaterialRating === 3) {
-                    targetTable = ft;
-                    break;
-                  }
-                }
-                if (targetTable) {
-                  sWorkshop.clearFusionStaging();
-                  sWorkshop.lockFusionTable(targetTable);
-                  sWorkshop.fillFusionSlots(targetTable, candidates);
-                } else if (!isSameLv) {
-                  sWorkshop.autoRegisterFusion();
+                  if (!selectedItems) break; // No level group has 3 accessories!
                 } else {
+                  selectedItems = candidates.slice(0, 3);
+                }
+
+                const maxLv = Math.max(...selectedItems.map(i => i._itemLevel || 1));
+                const targetTable = sWorkshop.findFusionTable(2, 3, maxLv);
+                if (!targetTable) break;
+
+                const materials = selectedItems.map(i => ({
+                  itemId: i.itemId,
+                  itemTid: i.itemTid,
+                  itemCnt: 1
+                }));
+
+                if (!sWorkshop.validateFusionMaterials(targetTable, materials)) {
                   break;
                 }
 
-                if (!sWorkshop.isFusionStagingFull()) {
-                  sWorkshop.clearFusionStaging();
-                  break;
-                }
-                const fusionRes = await sWorkshop.reqFusionStagedAsync();
-                if (fusionRes && fusionRes.length > 0) {
+                sWorkshop.clearFusionStaging();
+                const fusionRes = await sWorkshop.reqFusionAsync(targetTable.FusionID, materials);
+                if (fusionRes && (fusionRes.NetResult === 0 || !fusionRes.NetResult || fusionRes.Data)) {
                   loopGuard++;
-                  const rTid = fusionRes[0].tid;
-                  const rInfo = nn.db.equip.get(rTid) || nn.db.item.get(rTid);
-                  const rLoc = nn.db.locale.get(rInfo?.ItemName);
-                  const rName = rLoc?.VI || rLoc?.EN || rInfo?.ItemName || ('Trang sức TID ' + rTid);
-                  jewelData.fusedHistory.push('💍 Ghép T3 (Balo & Kho): ' + rName);
+                  let rName = '';
+                  try {
+                    if (fusionRes.Data) {
+                      const rewards = sWorkshop.buildFusionRewards(fusionRes.Data, 2);
+                      if (rewards && rewards.length > 0) {
+                        const rTid = rewards[0].tid;
+                        const rInfo = nn.db.equip.get(rTid) || nn.db.item.get(rTid);
+                        const rLoc = nn.db.locale.get(rInfo?.ItemName);
+                        rName = rLoc?.VI || rLoc?.EN || rInfo?.ItemName || ('Trang sức TID ' + rTid);
+                      }
+                    }
+                  } catch(e) {}
+                  jewelData.fusedHistory.push('💍 Ghép T3 (Balo & Kho): ' + (rName || 'Thành công'));
+                  nn.msgBroker.publish('onUpdateWorkShopFusion');
                 } else {
-                  sWorkshop.clearFusionStaging();
                   break;
                 }
               }
@@ -13341,6 +13348,7 @@ function sendEvaluatePoll() {
         };
       }
       let stageRunHistory = [];
+      let currentStageRun = null;
       try {
         const sTracker = globalThis.__stageTracker;
         const curProxy = sCombat ? sCombat.getCurrentActiveCombatProxy() : null;
@@ -13393,8 +13401,8 @@ function sendEvaluatePoll() {
               duration: Math.max(1, Math.round(cur.duration * 10) / 10),
               timestamp: nowTs
             });
-            if (sTracker.completedRuns.length > 20) {
-              sTracker.completedRuns = sTracker.completedRuns.slice(0, 20);
+            if (sTracker.completedRuns.length > 100) {
+              sTracker.completedRuns = sTracker.completedRuns.slice(0, 100);
             }
             sTracker.currentRun = null;
           }
@@ -13413,10 +13421,48 @@ function sendEvaluatePoll() {
               initialClearTid: curClearTid,
               recorded: false
             };
+            if (globalThis.__liveCombatTracker) {
+              globalThis.__liveCombatTracker.totalDamage = 0;
+              globalThis.__liveCombatTracker.normalDamage = 0;
+              globalThis.__liveCombatTracker.skillDamage = 0;
+              globalThis.__liveCombatTracker.hitCount = 0;
+              globalThis.__liveCombatTracker.startTime = nowTs;
+            }
           }
         }
 
-        stageRunHistory = sTracker.completedRuns.slice(0, 20);
+        // Live Combat Damage Tracking Hook
+        if (curProxy && curProxy._combatController && !curProxy._combatController.__dmgHooked) {
+          curProxy._combatController.__dmgHooked = true;
+          const origShow = curProxy._combatController.showDamageText;
+          if (!globalThis.__liveCombatTracker) {
+            globalThis.__liveCombatTracker = { totalDamage: 0, normalDamage: 0, skillDamage: 0, hitCount: 0, startTime: nowTs };
+          }
+          curProxy._combatController.showDamageText = function(pos, damage, damageType) {
+            try {
+              const dmg = typeof damage === 'number' ? damage : (damage ? parseFloat(damage) : 0);
+              if (dmg > 0) {
+                const tr = globalThis.__liveCombatTracker;
+                tr.totalDamage += dmg;
+                tr.hitCount++;
+                if (damageType === 2 || damageType === 4) {
+                  tr.normalDamage += dmg;
+                } else {
+                  tr.skillDamage += dmg;
+                }
+              }
+            } catch(e) {}
+            return origShow.apply(this, arguments);
+          };
+        }
+
+        stageRunHistory = sTracker.completedRuns.slice(0, 100);
+        currentStageRun = sTracker.currentRun ? {
+          stage_id: sTracker.currentRun.stageId,
+          duration: Math.max(0.1, Math.round((curElapsed > 0 ? curElapsed : ((nowTs - sTracker.currentRun.startTime) / 1000)) * 10) / 10),
+          status: 'running',
+          timestamp: sTracker.currentRun.startTime
+        } : null;
       } catch(stErr) {}
 
       return JSON.stringify({
@@ -13450,6 +13496,8 @@ function sendEvaluatePoll() {
         jewelsData: jewelData,
         equippedGear: equippedGear,
         stageRunHistory: stageRunHistory,
+        currentStageRun: currentStageRun,
+        liveCombatTracker: globalThis.__liveCombatTracker || null,
         stats: stats
       });
     } catch(err) {
@@ -13476,6 +13524,18 @@ function applyLiveGameData(data) {
   if (!data) return;
   if (data.stageRunHistory && Array.isArray(data.stageRunHistory) && data.stageRunHistory.length > 0) {
     updateStageHistoryFromGame(data.stageRunHistory);
+  }
+  if (data.currentStageRun) {
+    window.liveCurrentStageRun = data.currentStageRun;
+    const histSection = document.getElementById('stageHistorySection');
+    if (histSection && histSection.style.display !== 'none') {
+      renderStageHistoryTable();
+    }
+  } else {
+    window.liveCurrentStageRun = null;
+  }
+  if (data.liveCombatTracker) {
+    window.liveCombatTracker = data.liveCombatTracker;
   }
   if (data.classSwitched) {
     const clsName = data.heroClassType === 1 ? 'Hiệp Sĩ (Melee)' : (data.heroClassType === 3 ? 'Pháp Sư (Mage)' : 'Cung Thủ (Ranged)');
@@ -13880,6 +13940,7 @@ function renderTree() {
   const avail = getAvailableSkillPoints();
 
   container.innerHTML = classTree.branches.map(function(branch) {
+    const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
     const nodesHtml = branch.skills.map(function(s, sIdx) {
       const emoji = getIconEmoji(s.name_vi, currentClass);
       const isSelected = selectedSkill && selectedSkill.id === s.id;
@@ -13889,24 +13950,27 @@ function renderTree() {
       const connector = sIdx < branch.skills.length - 1 ? '<div class="vert-connector"></div>' : '';
       const iconHtml = getSkillIconHtml(s.icon, emoji, 'skill-icon-img');
       const badgeHtml = s.is_passive 
-        ? '<span class="node-type-badge badge-passive">🛡️ Bị động</span>'
-        : '<span class="node-type-badge badge-active">⚔️ Chủ động</span>';
+        ? (isEn ? '<span class="node-type-badge badge-passive">🛡️ Passive</span>' : '<span class="node-type-badge badge-passive">🛡️ Bị động</span>')
+        : (isEn ? '<span class="node-type-badge badge-active">⚔️ Active</span>' : '<span class="node-type-badge badge-active">⚔️ Chủ động</span>');
 
       const allocBadgeClass = allocLv >= 10 ? 'max-pts' : allocLv > 0 ? 'has-pts' : 'zero-pts';
       const allocBadgeText = allocLv >= 10 ? 'MAX (10/10)' : ('Lv. ' + allocLv + ' / 10');
 
       let lockHtml = '';
       if (!isUnlocked) {
-        lockHtml = '<div class="node-lock-tag">🔒 Cần Lv.' + s.req_player_level + '</div>';
+        lockHtml = isEn ? ('<div class="node-lock-tag">🔒 Req. Lv.' + s.req_player_level + '</div>') : ('<div class="node-lock-tag">🔒 Cần Lv.' + s.req_player_level + '</div>');
       }
+
+      const nodeName = (isEn && s.name_en) ? s.name_en : s.name_vi;
+      const reqText = isEn ? ('Req: Lv.' + s.req_player_level) : ('Yêu cầu: Lv.' + s.req_player_level);
 
       return '<div class="skill-node-vert ' + (isSelected ? 'selected' : '') + ' ' + (isUnlocked ? '' : 'locked') + '" id="node_' + s.id + '" onclick="selectSkillNode(\'' + s.id + '\')">' +
         '<div class="node-icon-box">' + iconHtml + '</div>' +
-        '<div class="node-name" title="' + s.name_vi + '">' + s.name_vi + '</div>' +
+        '<div class="node-name" title="' + nodeName + '">' + nodeName + '</div>' +
         '<div class="node-alloc-badge ' + allocBadgeClass + '">' + allocBadgeText + '</div>' +
         badgeHtml +
         lockHtml +
-        '<div class="node-req">Yêu cầu: Lv.' + s.req_player_level + '</div>' +
+        '<div class="node-req">' + reqText + '</div>' +
         '<div class="node-quick-ctrls" onclick="event.stopPropagation();">' +
         '<button class="ctrl-btn" onclick="changeSkillPoints(\'' + s.id + '\', -1)" ' + (allocLv <= 0 ? 'disabled' : '') + '>-</button>' +
         '<button class="ctrl-btn" onclick="changeSkillPoints(\'' + s.id + '\', 1)" ' + (!isUnlocked || allocLv >= 10 || avail <= 0 ? 'disabled' : '') + '>+</button>' +
@@ -13951,18 +14015,19 @@ function selectSkillNode(skillId) {
 
 function updateInspector() {
   if (!selectedSkill) return;
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const s = selectedSkill;
   const alloc = skillAllocations[s.id] || 0;
   const isUnlocked = isSkillUnlocked(s);
   const avail = getAvailableSkillPoints();
 
-  document.getElementById('insName').innerText = s.name_vi;
-  document.getElementById('insSub').innerText = s.name_en + ' | Yêu cầu: Cấp ' + s.req_player_level;
+  document.getElementById('insName').innerText = (isEn && s.name_en) ? s.name_en : s.name_vi;
+  document.getElementById('insSub').innerText = isEn ? (s.name_en + ' | Req: Level ' + s.req_player_level) : (s.name_en + ' | Yêu cầu: Cấp ' + s.req_player_level);
   
   const emoji = getIconEmoji(s.name_vi, currentClass);
   document.getElementById('insIcon').innerHTML = getSkillIconHtml(s.icon, emoji, 'skill-icon-img');
 
-  const allocText = alloc >= 10 ? 'MAX (10/10)' : ('Cấp ' + alloc + ' / 10');
+  const allocText = alloc >= 10 ? 'MAX (10/10)' : (isEn ? ('Level ' + alloc + ' / 10') : ('Cấp ' + alloc + ' / 10'));
   document.getElementById('insAllocLevel').innerText = allocText;
   document.getElementById('insAllocLevel').style.color = alloc >= 10 ? '#e3b341' : alloc > 0 ? '#58a6ff' : '#8b949e';
 
@@ -13978,38 +14043,40 @@ function updateInspector() {
 
   if (isPassive) {
     typeBadge.className = 'node-type-badge badge-passive';
-    typeBadge.innerText = '🛡️ Kỹ Năng Bị Động (Passive)';
+    typeBadge.innerText = isEn ? '🛡️ Passive Skill' : '🛡️ Kỹ Năng Bị Động (Passive)';
     rowDmg.style.display = 'none';
     rowCd.style.display = 'none';
-    typeLabel.innerText = '🛡️ Bị động (Tự động kích hoạt)';
+    typeLabel.innerText = isEn ? '🛡️ Passive (Auto triggered)' : '🛡️ Bị động (Tự động kích hoạt)';
     typeLabel.style.color = '#58a6ff';
     descBox.className = 'desc-box passive';
   } else {
     typeBadge.className = 'node-type-badge badge-active';
-    typeBadge.innerText = '⚔️ Kỹ Năng Chủ Động (Active)';
+    typeBadge.innerText = isEn ? '⚔️ Active Skill' : '⚔️ Kỹ Năng Chủ Động (Active)';
     rowDmg.style.display = 'flex';
     rowCd.style.display = 'flex';
-    typeLabel.innerText = '⚔️ Chủ động (Có hồi chiêu)';
+    typeLabel.innerText = isEn ? '⚔️ Active (Cooldown based)' : '⚔️ Chủ động (Có hồi chiêu)';
     typeLabel.style.color = '#ffa657';
     descBox.className = 'desc-box active';
   }
 
-  document.getElementById('insLvLabel').innerText = 'Cấp ' + selectedLevel + ' / 10';
+  document.getElementById('insLvLabel').innerText = isEn ? ('Level ' + selectedLevel + ' / 10') : ('Cấp ' + selectedLevel + ' / 10');
   document.getElementById('insSlider').value = selectedLevel;
 
   const lvData = s.levels.find(l => l.level === selectedLevel) || s.levels[0];
   if (!isPassive) {
-    document.getElementById('insDmg').innerText = lvData.damage_percent ? (lvData.damage_percent + '%') : 'Theo hiệu ứng';
+    document.getElementById('insDmg').innerText = lvData.damage_percent ? (lvData.damage_percent + '%') : (isEn ? 'By effect' : 'Theo hiệu ứng');
     document.getElementById('insCd').innerText = lvData.cooldown_sec + 's';
   }
   
   if (s.pre_req) {
-    document.getElementById('insPreReq').innerText = 'Cần ' + s.pre_req.parent_name + ' (Cấp ' + s.pre_req.req_level + ')';
+    document.getElementById('insPreReq').innerText = isEn ?
+      ('Req: ' + s.pre_req.parent_name + ' (Lv. ' + s.pre_req.req_level + ')') :
+      ('Cần ' + s.pre_req.parent_name + ' (Cấp ' + s.pre_req.req_level + ')');
   } else {
-    document.getElementById('insPreReq').innerText = 'Không có (Kỹ năng khởi đầu)';
+    document.getElementById('insPreReq').innerText = isEn ? 'None (Starter skill)' : 'Không có (Kỹ năng khởi đầu)';
   }
 
-  document.getElementById('insDesc').innerText = lvData.description || 'Không có mô tả thêm.';
+  document.getElementById('insDesc').innerText = (isEn && lvData.description_en) ? lvData.description_en : (lvData.description || (isEn ? 'No extra description.' : 'Không có mô tả thêm.'));
 }
 
 function changeSkillLevel(lv) {
@@ -14090,11 +14157,77 @@ function getAreaIcon(areaName) {
   return '🏞️';
 }
 
+function buildStageRankingFromHistory(history, stageDataList) {
+  const validRuns = (history || []).filter(r => r && r.status === 'success' && r.duration > 0);
+  const stageGroups = new Map();
+  for (const r of validRuns) {
+    if (!stageGroups.has(r.stage_id)) stageGroups.set(r.stage_id, []);
+    stageGroups.get(r.stage_id).push(r);
+  }
+
+  const result = [];
+  for (const [stageId, runs] of stageGroups.entries()) {
+    const s = (stageDataList && stageDataList.find(x => x.stage_id == stageId)) || {
+      stage_id: stageId,
+      display_tag: 'Ải ' + stageId,
+      area_name: 'Chiến trường',
+      total_gold: 10000,
+      clear_gold: 7000,
+      boss_gold: 3000,
+      total_exp: 20000,
+      clear_exp: 14000,
+      boss_exp: 6000,
+      total_hp: 500000
+    };
+
+    const count = runs.length;
+    const avgSec = runs.reduce((acc, cur) => acc + cur.duration, 0) / count;
+    const minSec = Math.min(...runs.map(r => r.duration));
+    const calcGps = s.total_gold / avgSec;
+    const calcGpm = calcGps * 60;
+    const calcEps = (s.total_exp || 0) / avgSec;
+    const goldHp = s.total_hp > 0 ? (s.total_gold / s.total_hp) : 0;
+
+    result.push({
+      ...s,
+      clear_count: count,
+      avg_sec: avgSec,
+      min_sec: minSec,
+      calc_sec: avgSec,
+      calc_gps: calcGps,
+      calc_gpm: calcGpm,
+      calc_eps: calcEps,
+      calc_gold_hp: goldHp,
+      from_history: true
+    });
+  }
+  return result;
+}
+
+function translateStageTag(tag) {
+  if (!tag) return '';
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
+  if (!isEn) return tag;
+  return tag.replace('Rất khó', 'Very Hard')
+            .replace('Rất Khó', 'Very Hard')
+            .replace('Cực khó', 'Expert')
+            .replace('Cực Khó', 'Expert')
+            .replace('Ác mộng', 'Nightmare')
+            .replace('Ác Mộng', 'Nightmare')
+            .replace('Địa ngục', 'Hell')
+            .replace('Địa Ngục', 'Hell')
+            .replace('Khó', 'Hard')
+            .replace('Thường', 'Normal')
+            .replace('Dễ', 'Easy')
+            .replace('Ải', 'Stage');
+}
+
 function renderStageTable() {
   const tbody = document.getElementById('stageTableBody');
   if (!tbody) return;
 
-  const scope = document.getElementById('stageScopeSelect')?.value || 'unlocked';
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
+  const scope = document.getElementById('stageScopeSelect')?.value || 'history';
   const sortMode = document.getElementById('stageSortSelect')?.value || 'gps';
   const query = (document.getElementById('stageSearchInput')?.value || '').toLowerCase().trim();
   const maxUnlockedId = userProfile.maxUnlockedStageTid || (userProfile.clearStageTid ? userProfile.clearStageTid + 1 : (userProfile.stageTid || 13210));
@@ -14104,33 +14237,58 @@ function renderStageTable() {
   // Update scope dropdown text dynamically
   const optUnlocked = document.querySelector('#stageScopeSelect option[value="unlocked"]');
   if (optUnlocked) {
-    optUnlocked.text = 'Chỉ hiện Ải đã mở khóa (≤ Ải ' + maxUnlockedTag + ')';
+    optUnlocked.text = isEn ? ('Unlocked Stages Only (≤ Stage ' + translateStageTag(maxUnlockedTag) + ')') : ('Chỉ hiện Ải đã mở khóa (≤ Ải ' + maxUnlockedTag + ')');
   }
 
   const curFarmingStageId = userProfile.stageTid || 13208;
   const maxStageId = maxUnlockedId;
 
-  let list = stageData.map(function(s) {
-    const mobWaves = s.boss_req_mobs / 4.5;
-    const spawnTime = mobWaves * 1.5 + 3.0;
-    const estSec = Math.max(10, (s.total_hp / currentDps) + spawnTime);
-    const gps = s.total_gold / estSec;
-    const gpm = gps * 60;
-    const eps = (s.total_exp || 0) / estSec;
-    const goldHp = s.total_hp > 0 ? (s.total_gold / s.total_hp) : 0;
+  // Build real performance map from stage history (exclude failed and abandoned runs)
+  const history = getStageHistory();
+  const historyRankedStages = buildStageRankingFromHistory(history, stageData || []);
+  const historyMap = new Map();
+  for (const hr of historyRankedStages) {
+    historyMap.set(hr.stage_id, hr);
+  }
 
-    return {
-      ...s,
-      calc_sec: estSec,
-      calc_gps: gps,
-      calc_gpm: gpm,
-      calc_eps: eps,
-      calc_gold_hp: goldHp
-    };
-  });
+  let list = [];
 
-  if (scope === 'unlocked') {
-    list = list.filter(s => s.stage_id <= maxUnlockedId);
+  if (scope === 'history') {
+    list = [...historyRankedStages];
+    if (list.length === 0) {
+      tbody.innerHTML = isEn 
+        ? '<tr><td colspan="11" style="text-align:center; padding:30px; color:#8b949e;">No cleared stage data in history yet. Enable Live Sync and clear stages in-game to measure real performance!</td></tr>'
+        : '<tr><td colspan="11" style="text-align:center; padding:30px; color:#8b949e;">Chưa có dữ liệu ải hoàn thành trong lịch sử chạy. Hãy bật Live Sync và hoàn thành ải trong game để BXH ghi nhận hiệu suất thực tế!</td></tr>';
+      return;
+    }
+  } else {
+    list = (stageData || []).map(function(s) {
+      if (historyMap.has(s.stage_id)) {
+        return historyMap.get(s.stage_id);
+      }
+      const mobWaves = s.boss_req_mobs / 4.5;
+      const spawnTime = mobWaves * 1.5 + 3.0;
+      const estSec = Math.max(10, (s.total_hp / (currentDps || 3415)) + spawnTime);
+      const gps = s.total_gold / estSec;
+      const gpm = gps * 60;
+      const eps = (s.total_exp || 0) / estSec;
+      const goldHp = s.total_hp > 0 ? (s.total_gold / s.total_hp) : 0;
+
+      return {
+        ...s,
+        calc_sec: estSec,
+        calc_gps: gps,
+        calc_gpm: gpm,
+        calc_eps: eps,
+        calc_gold_hp: goldHp,
+        clear_count: 0,
+        from_history: false
+      };
+    });
+
+    if (scope === 'unlocked') {
+      list = list.filter(s => s.stage_id <= maxUnlockedId);
+    }
   }
 
   if (query) {
@@ -14155,31 +14313,35 @@ function renderStageTable() {
   // Best gold stage
   const bestGold = [...list].sort((a, b) => b.calc_gps - a.calc_gps)[0];
   if (bestGold && document.getElementById('cardPersonalRate')) {
-    document.getElementById('cardPersonalRate').innerText = bestGold.calc_gps.toFixed(2) + ' Vàng / Giây';
-    document.getElementById('cardPersonalGpm').innerText = '~' + Math.round(bestGold.calc_gpm).toLocaleString() + ' Vàng / Phút';
-    document.getElementById('cardPersonalTitle').innerText = 'Ải ' + bestGold.display_tag + ' (' + bestGold.area_name + ')';
+    document.getElementById('cardPersonalRate').innerText = isEn ? (bestGold.calc_gps.toFixed(2) + ' Gold / Sec') : (bestGold.calc_gps.toFixed(2) + ' Vàng / Giây');
+    document.getElementById('cardPersonalGpm').innerText = isEn ? ('~' + Math.round(bestGold.calc_gpm).toLocaleString() + ' Gold / Min') : ('~' + Math.round(bestGold.calc_gpm).toLocaleString() + ' Vàng / Phút');
+    document.getElementById('cardPersonalTitle').innerText = isEn ? ('Stage ' + translateStageTag(bestGold.display_tag) + ' (' + bestGold.area_name + ')') : ('Ải ' + bestGold.display_tag + ' (' + bestGold.area_name + ')');
   }
 
   // Best EXP stage
   const bestExp = [...list].sort((a, b) => b.calc_eps - a.calc_eps)[0];
   if (bestExp && document.getElementById('cardExpRate')) {
-    document.getElementById('cardExpRate').innerText = bestExp.calc_eps.toFixed(2) + ' EXP / Giây';
-    document.getElementById('cardExpEpm').innerText = '~' + Math.round(bestExp.calc_eps * 3600).toLocaleString() + ' EXP / Giờ';
-    document.getElementById('cardExpTitle').innerText = 'Ải ' + bestExp.display_tag + ' (' + bestExp.area_name + ')';
+    document.getElementById('cardExpRate').innerText = isEn ? (bestExp.calc_eps.toFixed(2) + ' EXP / Sec') : (bestExp.calc_eps.toFixed(2) + ' EXP / Giây');
+    document.getElementById('cardExpEpm').innerText = isEn ? ('~' + Math.round(bestExp.calc_eps * 3600).toLocaleString() + ' EXP / Hour') : ('~' + Math.round(bestExp.calc_eps * 3600).toLocaleString() + ' EXP / Giờ');
+    document.getElementById('cardExpTitle').innerText = isEn ? ('Stage ' + translateStageTag(bestExp.display_tag) + ' (' + bestExp.area_name + ')') : ('Ải ' + bestExp.display_tag + ' (' + bestExp.area_name + ')');
   }
 
   // Current stage stats
-  const currentStageObj = stageData.find(s => s.stage_id === maxStageId);
+  const currentStageObj = historyMap.get(curFarmingStageId) || (stageData && stageData.find(s => s.stage_id === curFarmingStageId)) || (stageData && stageData.find(s => s.stage_id === maxStageId));
   if (currentStageObj && document.getElementById('cardCurrentGold')) {
-    const mobWaves = currentStageObj.boss_req_mobs / 4.5;
-    const spawnTime = mobWaves * 1.5 + 3.0;
-    const curSec = Math.max(10, (currentStageObj.total_hp / currentDps) + spawnTime);
-    const curGps = (currentStageObj.total_gold / curSec).toFixed(2);
-    const curEps = ((currentStageObj.total_exp || 0) / curSec).toFixed(2);
-    window.__currentEps = parseFloat(curEps);
-    document.getElementById('cardCurrentGold').innerText = curGps + ' Vàng/s';
-    document.getElementById('cardCurrentExp').innerText = curEps + ' EXP/s';
-    document.getElementById('cardCurrentTitle').innerText = 'Ải ' + (currentStageObj.display_tag || maxStageId) + ' (' + currentStageObj.area_name + ')';
+    let curGps = currentStageObj.calc_gps;
+    let curEps = currentStageObj.calc_eps;
+    if (curGps === undefined) {
+      const mobWaves = currentStageObj.boss_req_mobs / 4.5;
+      const spawnTime = mobWaves * 1.5 + 3.0;
+      const curSec = Math.max(10, (currentStageObj.total_hp / (currentDps || 3415)) + spawnTime);
+      curGps = (currentStageObj.total_gold / curSec);
+      curEps = ((currentStageObj.total_exp || 0) / curSec);
+    }
+    window.__currentEps = parseFloat(curEps.toFixed(2));
+    document.getElementById('cardCurrentGold').innerText = isEn ? (curGps.toFixed(2) + ' Gold/s') : (curGps.toFixed(2) + ' Vàng/s');
+    document.getElementById('cardCurrentExp').innerText = isEn ? (curEps.toFixed(2) + ' EXP/s') : (curEps.toFixed(2) + ' EXP/s');
+    document.getElementById('cardCurrentTitle').innerText = isEn ? ('Stage ' + (translateStageTag(currentStageObj.display_tag) || curFarmingStageId) + ' (' + currentStageObj.area_name + ')') : ('Ải ' + (currentStageObj.display_tag || curFarmingStageId) + ' (' + currentStageObj.area_name + ')');
   }
 
   tbody.innerHTML = list.slice(0, 100).map(function(s, idx) {
@@ -14187,41 +14349,44 @@ function renderStageTable() {
     const isCurrent = s.stage_id === curFarmingStageId;
     const isTop1 = idx === 0;
     
-    let recommendation = '<span style="color:#8b949e;">Bình thường</span>';
+    let recommendation = isEn ? '<span style="color:#8b949e;">Normal</span>' : '<span style="color:#8b949e;">Bình thường</span>';
     if (isTop1) {
-      recommendation = '<b style="color:#e3b341;">⭐ TỐI ƯU NHẤT (NÊN AFK)</b>';
+      recommendation = isEn ? '<b style="color:#e3b341;">⭐ BEST STAGE (AFK)</b>' : '<b style="color:#e3b341;">⭐ TỐI ƯU NHẤT (NÊN AFK)</b>';
     } else if (idx < 5) {
-      recommendation = '<span style="color:#7ee787; font-weight:600;">Khuyên Dùng AFK</span>';
+      recommendation = isEn ? '<span style="color:#7ee787; font-weight:600;">Recommended AFK</span>' : '<span style="color:#7ee787; font-weight:600;">Khuyên Dùng AFK</span>';
     } else if (isCurrent) {
-      recommendation = '<span style="color:#58a6ff; font-weight:600;">Ải Hiện Tại</span>';
+      recommendation = isEn ? '<span style="color:#58a6ff; font-weight:600;">Current Stage</span>' : '<span style="color:#58a6ff; font-weight:600;">Ải Hiện Tại</span>';
     }
 
-    const stageLabel = s.display_tag || ('Ải ' + s.stage_id);
+    const stageLabel = isEn ? (translateStageTag(s.display_tag) || ('Stage ' + s.stage_id)) : (s.display_tag || ('Ải ' + s.stage_id));
     const areaIcon = getAreaIcon(s.area_name);
+    const timeBadge = s.from_history 
+      ? ('⏱️ ' + s.calc_sec.toFixed(1) + 's <span style="font-size:10px; background:#238636; color:#fff; padding:1px 5px; border-radius:3px; display:inline-block; margin-top:2px;">(' + s.clear_count + ' ' + (isEn ? 'clears' : 'lần clear') + ')</span>')
+      : ('⏱️ ~' + s.calc_sec.toFixed(1) + 's <span style="font-size:10px; color:#8b949e; display:inline-block; margin-top:2px;">(' + (isEn ? 'est.' : 'ước tính') + ')</span>');
 
     return '<tr style="' + (isTop1 ? 'background:#e3b34114;' : isCurrent ? 'background:#1f6feb14;' : '') + '">' +
       '<td style="text-align:center;"><span class="rank-badge ' + rankClass + '">' + (idx + 1) + '</span></td>' +
-      '<td><b style="color:#58a6ff; font-size:14px;">' + stageLabel + '</b>' + (isCurrent ? ' <span style="font-size:10px; background:#1f6feb; padding:1px 5px; border-radius:4px; color:#fff;">Đang ở</span>' : '') + '<br><span style="font-size:11px; color:#8b949e;">ID: ' + s.stage_id + '</span></td>' +
+      '<td><b style="color:#58a6ff; font-size:14px;">' + stageLabel + '</b>' + (isCurrent ? (' <span style="font-size:10px; background:#1f6feb; padding:1px 5px; border-radius:4px; color:#fff;">' + (isEn ? 'Current' : 'Đang ở') + '</span>') : '') + '<br><span style="font-size:11px; color:#8b949e;">ID: ' + s.stage_id + '</span></td>' +
       '<td><b>' + areaIcon + ' ' + s.area_name + '</b></td>' +
       '<td style="color:#e3b341; font-weight:bold; font-size:13.5px;">💰 ' + s.calc_gps.toFixed(2) + ' /s</td>' +
       '<td style="color:#bc8cff; font-weight:bold; font-size:13.5px;">📈 ' + s.calc_eps.toFixed(2) + ' /s</td>' +
       '<td style="color:#f2cc60; font-weight:600;">🪙 ' + Math.round(s.calc_gpm).toLocaleString() + ' /m</td>' +
-      '<td><b>' + Number(s.total_gold).toLocaleString() + ' 💰</b><br><span style="font-size:11px; color:#8b949e;">(Ải: ' + Number(s.clear_gold).toLocaleString() + ' + Boss: ' + Number(s.boss_gold).toLocaleString() + ')</span></td>' +
-      '<td><b>' + Number(s.total_exp || 0).toLocaleString() + ' ⭐</b><br><span style="font-size:11px; color:#8b949e;">(Ải: ' + Number(s.clear_exp || 0).toLocaleString() + ' + Boss: ' + Number(s.boss_exp || 0).toLocaleString() + ')</span></td>' +
-      '<td>⏱️ ' + s.calc_sec.toFixed(1) + 's</td>' +
+      '<td><b>' + Number(s.total_gold).toLocaleString() + ' 💰</b><br><span style="font-size:11px; color:#8b949e;">(' + (isEn ? 'Stage' : 'Ải') + ': ' + Number(s.clear_gold).toLocaleString() + ' + Boss: ' + Number(s.boss_gold).toLocaleString() + ')</span></td>' +
+      '<td><b>' + Number(s.total_exp || 0).toLocaleString() + ' ⭐</b><br><span style="font-size:11px; color:#8b949e;">(' + (isEn ? 'Stage' : 'Ải') + ': ' + Number(s.clear_exp || 0).toLocaleString() + ' + Boss: ' + Number(s.boss_exp || 0).toLocaleString() + ')</span></td>' +
+      '<td>' + timeBadge + '</td>' +
       '<td>❤️ ' + Number(Math.round(s.total_hp)).toLocaleString() + ' HP</td>' +
       '<td>' + recommendation + '</td>' +
       '</tr>';
   }).join('');
 }
 
-/* SECTION: LỊCH SỬ CHẠY ẢI (20 ẢI GẦN NHẤT) */
+/* SECTION: LỊCH SỬ CHẠY ẢI (100 ẢI GẦN NHẤT) */
 function getStageHistory() {
   try {
     const raw = localStorage.getItem('genesis_stage_run_history');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed.slice(0, 20);
+      if (Array.isArray(parsed)) return parsed.slice(0, 100);
     }
   } catch(e) {}
   return [];
@@ -14229,13 +14394,13 @@ function getStageHistory() {
 
 function saveStageHistory(list) {
   try {
-    const trimmed = (list || []).slice(0, 20);
+    const trimmed = (list || []).slice(0, 100);
     localStorage.setItem('genesis_stage_run_history', JSON.stringify(trimmed));
   } catch(e) {}
 }
 
 function clearStageHistory() {
-  if (confirm('Bạn có chắc muốn xóa sạch 20 ải trong lịch sử chạy không?')) {
+  if (confirm('Bạn có chắc muốn xóa sạch 100 ải trong lịch sử chạy không?')) {
     try {
       localStorage.setItem('genesis_stage_run_history', JSON.stringify([]));
     } catch(e) {}
@@ -14249,6 +14414,7 @@ function clearStageHistory() {
       } catch(e) {}
     }
     renderStageHistoryTable();
+    renderStageTable();
   }
 }
 
@@ -14266,11 +14432,12 @@ function updateStageHistoryFromGame(gameRuns) {
     }
   }
   if (changed) {
-    saveStageHistory(currentHistory.slice(0, 20));
+    saveStageHistory(currentHistory.slice(0, 100));
     const histSection = document.getElementById('stageHistorySection');
     if (histSection && histSection.style.display !== 'none') {
       renderStageHistoryTable();
     }
+    renderStageTable();
   }
 }
 
@@ -14278,13 +14445,56 @@ function renderStageHistoryTable() {
   const tbody = document.getElementById('stageHistoryTableBody');
   if (!tbody) return;
 
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const history = getStageHistory();
-  if (history.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px; color:#8b949e;">Chưa có lịch sử chạy ải nào. Hãy bật chế độ Live Sync và vào chiến đấu trong game!</td></tr>';
+  const hasLiveRun = window.liveCurrentStageRun && window.liveCurrentStageRun.stage_id;
+
+  if (history.length === 0 && !hasLiveRun) {
+    tbody.innerHTML = isEn
+      ? '<tr><td colspan="11" style="text-align:center; padding:30px; color:#8b949e;">No stage history recorded yet. Connect Live Sync and start combat in-game!</td></tr>'
+      : '<tr><td colspan="11" style="text-align:center; padding:30px; color:#8b949e;">Chưa có lịch sử chạy ải nào. Hãy bật chế độ Live Sync và vào chiến đấu trong game!</td></tr>';
     return;
   }
 
-  tbody.innerHTML = history.slice(0, 20).map(function(r, idx) {
+  let liveRowHtml = '';
+  if (hasLiveRun) {
+    const lr = window.liveCurrentStageRun;
+    const ls = (window.stageData && window.stageData.find(st => st.stage_id == lr.stage_id)) || (typeof stageData !== 'undefined' && stageData.find(st => st.stage_id == lr.stage_id)) || {
+      stage_id: lr.stage_id,
+      display_tag: 'Ải ' + lr.stage_id,
+      area_name: 'Chiến Trường',
+      total_gold: 15000,
+      clear_gold: 10000,
+      boss_gold: 5000,
+      total_exp: 7500,
+      clear_exp: 5000,
+      boss_exp: 2500,
+      total_hp: 500000
+    };
+    const dur = Math.max(0.1, lr.duration || 1);
+    const liveGps = ls.total_gold / dur;
+    const liveGpm = liveGps * 60;
+    const liveEps = (ls.total_exp || 0) / dur;
+    const stageLabel = isEn ? (translateStageTag(ls.display_tag) || ('Stage ' + ls.stage_id)) : (ls.display_tag || ('Ải ' + ls.stage_id));
+    const areaName = (isEn && ls.area_name === 'Chiến Trường') ? 'Battlefield' : ls.area_name;
+    const areaIcon = typeof getAreaIcon === 'function' ? getAreaIcon(ls.area_name) : '🗺️';
+
+    liveRowHtml = '<tr style="background: rgba(227, 179, 65, 0.16); border-left: 4px solid #e3b341;">' +
+      '<td style="text-align:center;"><span style="background:#e3b341; color:#000; font-weight:800; font-size:11px; padding:3px 8px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; gap:3px; white-space:nowrap; box-shadow:0 0 6px rgba(227, 179, 65, 0.4); line-height:1.2;">⚔️ LIVE</span></td>' +
+      '<td><b style="color:#58a6ff; font-size:14px;">' + stageLabel + '</b> <span style="font-size:10px; background:#e3b341; color:#000; padding:1px 5px; border-radius:4px; font-weight:bold;">' + (isEn ? 'FARMING' : 'ĐANG ĐÁNH') + '</span><br><span style="font-size:11px; color:#8b949e;">ID: ' + ls.stage_id + '</span></td>' +
+      '<td><b>' + areaIcon + ' ' + areaName + '</b></td>' +
+      '<td style="color:#e3b341; font-weight:bold; font-size:13.5px;">💰 ' + liveGps.toFixed(2) + ' /s</td>' +
+      '<td style="color:#bc8cff; font-weight:bold; font-size:13.5px;">📈 ' + liveEps.toFixed(2) + ' /s</td>' +
+      '<td style="color:#f2cc60; font-weight:600;">🪙 ' + Math.round(liveGpm).toLocaleString() + ' /m</td>' +
+      '<td><b>' + Number(ls.total_gold).toLocaleString() + ' 💰</b><br><span style="font-size:11px; color:#8b949e;">(' + (isEn ? 'Stage' : 'Ải') + ': ' + Number(ls.clear_gold).toLocaleString() + ' + Boss: ' + Number(ls.boss_gold).toLocaleString() + ')</span></td>' +
+      '<td><b>' + Number(ls.total_exp || 0).toLocaleString() + ' ⭐</b><br><span style="font-size:11px; color:#8b949e;">(' + (isEn ? 'Stage' : 'Ải') + ': ' + Number(ls.clear_exp || 0).toLocaleString() + ' + Boss: ' + Number(ls.boss_exp || 0).toLocaleString() + ')</span></td>' +
+      '<td style="color:#7ee787; font-weight:bold;">⏱️ ' + dur.toFixed(1) + 's <span style="font-size:11px; color:#8b949e;">' + (isEn ? '(farming...)' : '(đang đánh...)') + '</span></td>' +
+      '<td>❤️ ' + Number(Math.round(ls.total_hp)).toLocaleString() + ' HP</td>' +
+      '<td style="text-align:center;"><span style="color:#e3b341; font-weight:bold; font-size:12.5px; background:rgba(227, 179, 65, 0.2); border:1px solid #e3b341; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">' + (isEn ? '⚔️ Running' : '⚔️ Đang chạy') + '</span></td>' +
+      '</tr>';
+  }
+
+  tbody.innerHTML = liveRowHtml + history.slice(0, 100).map(function(r, idx) {
     const s = (window.stageData && window.stageData.find(st => st.stage_id == r.stage_id)) || (typeof stageData !== 'undefined' && stageData.find(st => st.stage_id == r.stage_id)) || {
       stage_id: r.stage_id,
       display_tag: 'Ải ' + r.stage_id,
@@ -14298,7 +14508,8 @@ function renderStageHistoryTable() {
       total_hp: 500000
     };
 
-    const stageLabel = s.display_tag || ('Ải ' + s.stage_id);
+    const stageLabel = isEn ? (translateStageTag(s.display_tag) || ('Stage ' + s.stage_id)) : (s.display_tag || ('Ải ' + s.stage_id));
+    const areaName = (isEn && s.area_name === 'Chiến Trường') ? 'Battlefield' : s.area_name;
     const areaIcon = typeof getAreaIcon === 'function' ? getAreaIcon(s.area_name) : '🗺️';
     const dur = r.duration > 0 ? r.duration : Math.max(10, (s.total_hp / ((typeof currentDps !== 'undefined' ? currentDps : 100000) || 100000)) + 5);
     const calcGps = s.total_gold / dur;
@@ -14317,21 +14528,21 @@ function renderStageHistoryTable() {
       statusBadge = '<span style="color:#f85149; font-weight:bold; font-size:12.5px; background:rgba(248, 81, 73, 0.2); border:1px solid #f85149; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">❌ FAILED</span>';
     } else if (r.status === 'abandoned') {
       rowBg = 'background: rgba(110, 118, 129, 0.22); border-left: 4px solid #6e7681;';
-      statusBadge = '<span style="color:#8b949e; font-weight:bold; font-size:12.5px; background:rgba(110, 118, 129, 0.2); border:1px solid #6e7681; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">⏹️ Bỏ dở giữa chừng</span>';
+      statusBadge = '<span style="color:#8b949e; font-weight:bold; font-size:12.5px; background:rgba(110, 118, 129, 0.2); border:1px solid #6e7681; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">' + (isEn ? '⏹️ Abandoned' : '⏹️ Bỏ dở giữa chừng') + '</span>';
     } else {
       rowBg = 'background: rgba(63, 185, 80, 0.12); border-left: 4px solid #3fb950;';
-      statusBadge = '<span style="color:#3fb950; font-weight:bold; font-size:12.5px; background:rgba(63, 185, 80, 0.2); border:1px solid #3fb950; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">✅ Thành công</span>';
+      statusBadge = '<span style="color:#3fb950; font-weight:bold; font-size:12.5px; background:rgba(63, 185, 80, 0.2); border:1px solid #3fb950; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">' + (isEn ? '✅ Cleared' : '✅ Thành công') + '</span>';
     }
 
     return '<tr style="' + rowBg + '">' +
       '<td style="text-align:center;"><span class="rank-badge rank-other" style="background:#21262d; border-color:#30363d;">#' + (idx + 1) + '</span></td>' +
       '<td><b style="color:#58a6ff; font-size:14px;">' + stageLabel + '</b><br><span style="font-size:11px; color:#8b949e;">ID: ' + s.stage_id + '</span></td>' +
-      '<td><b>' + areaIcon + ' ' + s.area_name + '</b></td>' +
+      '<td><b>' + areaIcon + ' ' + areaName + '</b></td>' +
       '<td style="color:#e3b341; font-weight:bold; font-size:13.5px;">💰 ' + calcGps.toFixed(2) + ' /s</td>' +
       '<td style="color:#bc8cff; font-weight:bold; font-size:13.5px;">📈 ' + calcEps.toFixed(2) + ' /s</td>' +
       '<td style="color:#f2cc60; font-weight:600;">🪙 ' + Math.round(calcGpm).toLocaleString() + ' /m</td>' +
-      '<td><b>' + Number(s.total_gold).toLocaleString() + ' 💰</b><br><span style="font-size:11px; color:#8b949e;">(Ải: ' + Number(s.clear_gold).toLocaleString() + ' + Boss: ' + Number(s.boss_gold).toLocaleString() + ')</span></td>' +
-      '<td><b>' + Number(s.total_exp || 0).toLocaleString() + ' ⭐</b><br><span style="font-size:11px; color:#8b949e;">(Ải: ' + Number(s.clear_exp || 0).toLocaleString() + ' + Boss: ' + Number(s.boss_exp || 0).toLocaleString() + ')</span></td>' +
+      '<td><b>' + Number(s.total_gold).toLocaleString() + ' 💰</b><br><span style="font-size:11px; color:#8b949e;">(' + (isEn ? 'Stage' : 'Ải') + ': ' + Number(s.clear_gold).toLocaleString() + ' + Boss: ' + Number(s.boss_gold).toLocaleString() + ')</span></td>' +
+      '<td><b>' + Number(s.total_exp || 0).toLocaleString() + ' ⭐</b><br><span style="font-size:11px; color:#8b949e;">(' + (isEn ? 'Stage' : 'Ải') + ': ' + Number(s.clear_exp || 0).toLocaleString() + ' + Boss: ' + Number(s.boss_exp || 0).toLocaleString() + ')</span></td>' +
       '<td>⏱️ ' + dur.toFixed(1) + 's</td>' +
       '<td>❤️ ' + Number(Math.round(s.total_hp)).toLocaleString() + ' HP</td>' +
       '<td style="text-align:center;">' + statusBadge + '</td>' +
@@ -14486,12 +14697,13 @@ function renderClassDpsComparison() {
 
 function toggleDpsCombatMode() {
   dpsCombatMode = dpsCombatMode === 'aoe' ? 'single' : 'aoe';
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const btn = document.getElementById('dpsModeToggle');
   if (dpsCombatMode === 'aoe') {
-    btn.innerText = '🌾 Chế độ: Quét Lính (AoE)';
+    btn.innerText = isEn ? '🌾 Mode: Mob Clear (AoE)' : '🌾 Chế độ: Quét Lính (AoE)';
     btn.style.background = '#8957e5';
   } else {
-    btn.innerText = '👹 Chế độ: Đánh Boss (Single)';
+    btn.innerText = isEn ? '👹 Mode: Boss Fight (Single)' : '👹 Chế độ: Đánh Boss (Single)';
     btn.style.background = '#b62324';
   }
   renderCombatBreakdown();
@@ -14501,21 +14713,25 @@ function renderCombatBreakdown() {
   const container = document.getElementById('dpsTableBody');
   if (!container) return;
 
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
+
   // Update Live Stage & Combat Status Banner
   const curStageObj = (stageData && stageData.find(s => s.stage_id == userProfile.stageTid)) || (stageData && stageData.find(s => s.stage_id == 13207)) || (stageData && stageData[0]);
   const stageBanner = document.getElementById('dpsCurrentStageName');
   if (stageBanner && curStageObj) {
-    stageBanner.innerText = 'Ải ' + curStageObj.display_full;
+    stageBanner.innerText = isEn ? ('Stage ' + translateStageTag(curStageObj.display_full)) : ('Ải ' + curStageObj.display_full);
     // Update class label
     const classLabelEl = document.getElementById('dpsActiveClassLabel');
     if (classLabelEl) {
-      const classNames = { Ranged: '🏹 Cung Thủ', Melee: '⚔️ Hiệp Sĩ', Mage: '🔮 Pháp Sư' };
+      const classNames = isEn 
+        ? { Ranged: '🏹 Archer', Melee: '⚔️ Knight', Mage: '🔮 Mage' }
+        : { Ranged: '🏹 Cung Thủ', Melee: '⚔️ Hiệp Sĩ', Mage: '🔮 Pháp Sư' };
       classLabelEl.innerText = classNames[currentDpsClass] || currentDpsClass;
     }
     const hpEl = document.getElementById('dpsStageHp');
     if (hpEl) hpEl.innerText = Number(Math.round(curStageObj.total_hp)).toLocaleString() + ' HP';
     const gpsEl = document.getElementById('dpsStageGps');
-    if (gpsEl) gpsEl.innerText = (curStageObj.calc_gps || curStageObj.gold_per_sec || 272.5).toFixed(2) + ' Vàng/s';
+    if (gpsEl) gpsEl.innerText = (curStageObj.calc_gps || curStageObj.gold_per_sec || 272.5).toFixed(2) + (isEn ? ' Gold/s' : ' Vàng/s');
   }
 
   const st = (userProfile.stats && userProfile.stats.finalAttack) ? userProfile.stats : {
@@ -14691,12 +14907,12 @@ function renderCombatBreakdown() {
   if (profDpsEl) profDpsEl.innerText = Number(Math.round(totalDps)).toLocaleString() + ' DPS';
   // Also sync the "Dùng DPS Thực" button and slider
   const realDpsBtn = document.querySelector('button[onclick="applyRealDps()"]');
-  if (realDpsBtn) realDpsBtn.innerText = 'Dùng DPS Thực (' + Number(Math.round(totalDps)).toLocaleString() + ')';
+  if (realDpsBtn) realDpsBtn.innerText = (isEn ? 'Use Real DPS (' : 'Dùng DPS Thực (') + Number(Math.round(totalDps)).toLocaleString() + ')';
   document.getElementById('dpsTotalMinuteVal').innerText = Number(Math.round(totalDps * 60)).toLocaleString() + ' DMG';
   const clearEl = document.getElementById('dpsStageClearTime');
   if (clearEl && curStageObj) {
     const clearSec = totalDps > 0 ? (curStageObj.total_hp / totalDps) : (curStageObj.est_clear_sec || 20);
-    clearEl.innerText = '~' + clearSec.toFixed(1) + 's / lần';
+    clearEl.innerText = '~' + clearSec.toFixed(1) + (isEn ? 's / clear' : 's / lần');
   }
 
   // Render Table Rows (Sorted from highest to lowest damage)
@@ -14715,13 +14931,13 @@ function renderCombatBreakdown() {
     }
 
     const levelBadge = item.isNormal 
-      ? '<span class="badge" style="background:#21262d;">Cơ bản</span>'
-      : '<span class="badge badge-tier">Cấp ' + item.lv + ' / ' + (item.maxLv || 10) + '</span>';
+      ? ('<span class="badge" style="background:#21262d;">' + (isEn ? 'Basic' : 'Cơ bản') + '</span>')
+      : ('<span class="badge badge-tier">' + (isEn ? 'Level ' : 'Cấp ') + item.lv + ' / ' + (item.maxLv || 10) + '</span>');
 
-    const cdText = item.isNormal ? 'Không CD' : (item.cd + 's');
+    const cdText = item.isNormal ? (isEn ? 'No CD' : 'Không CD') : (item.cd + 's');
     const freqText = item.isNormal 
-      ? ('<b>' + item.castsPerMin.toFixed(1) + '</b> đòn/m')
-      : ('<b>' + item.castsPerMin.toFixed(2) + '</b> lần/m');
+      ? ('<b>' + item.castsPerMin.toFixed(1) + '</b> ' + (isEn ? 'hits/m' : 'đòn/m'))
+      : ('<b>' + item.castsPerMin.toFixed(2) + '</b> ' + (isEn ? 'casts/m' : 'lần/m'));
 
     return '<tr style="' + (idx === 0 ? 'background:#e3b3410c;' : '') + '">' +
       '<td style="text-align:center;"><span class="rank-badge ' + rankClass + '">' + (idx + 1) + '</span></td>' +
@@ -14735,15 +14951,15 @@ function renderCombatBreakdown() {
       '</div>' +
       '</td>' +
       '<td>' + levelBadge + '</td>' +
-      '<td><b style="color:' + (item.isNormal ? '#58a6ff' : '#ffa657') + '; font-size:14px;">' + Number(Math.round(item.effCastDmg)).toLocaleString() + '</b> DMG</td>' +
+      '<td><b id="dpsCastDmg_' + item.id + '" style="color:' + (item.isNormal ? '#58a6ff' : '#ffa657') + '; font-size:14px;">' + Number(Math.round(item.effCastDmg)).toLocaleString() + '</b> DMG</td>' +
       '<td>' + cdText + '</td>' +
       '<td>' + freqText + '</td>' +
-      '<td style="color:#ff7b72; font-weight:bold; font-size:14.5px;">💥 ' + Number(Math.round(item.dps)).toLocaleString() + ' DPS</td>' +
-      '<td style="color:#f2cc60; font-weight:600;">' + Number(Math.round(item.dpm)).toLocaleString() + '</td>' +
+      '<td id="dpsVal_' + item.id + '" style="color:#ff7b72; font-weight:bold; font-size:14.5px;">💥 ' + Number(Math.round(item.dps)).toLocaleString() + ' DPS</td>' +
+      '<td id="dpsDpm_' + item.id + '" style="color:#f2cc60; font-weight:600;">' + Number(Math.round(item.dpm)).toLocaleString() + '</td>' +
       '<td>' +
       '<div style="display:flex; align-items:center; gap:8px;">' +
-      '<b style="color:' + item.color + '; min-width:44px;">' + sPct.toFixed(1) + '%</b>' +
-      '<div style="flex:1; height:8px; background:#21262d; border-radius:4px; overflow:hidden;"><div style="width:' + sPct.toFixed(1) + '%; height:100%; background:' + item.color + ';"></div></div>' +
+      '<b id="dpsPctText_' + item.id + '" style="color:' + item.color + '; min-width:44px;">' + sPct.toFixed(1) + '%</b>' +
+      '<div style="flex:1; height:8px; background:#21262d; border-radius:4px; overflow:hidden;"><div id="dpsPctBar_' + item.id + '" style="width:' + sPct.toFixed(1) + '%; height:100%; background:' + item.color + '; transition: width 0.3s ease;"></div></div>' +
       '</div>' +
       '</td>' +
       '</tr>';
@@ -14769,6 +14985,81 @@ function renderCombatBreakdown() {
   });
   renderClassDpsComparison();
   updateDpsClassButtons();
+
+  // Save base combat items for real-time live damage ticker
+  window.__baseCombatItems = allCombatItems;
+  window.__baseTotalDps = totalDps;
+  startDpsLiveTicker();
+}
+
+function updateDpsLiveTick() {
+  if (!window.__baseCombatItems || window.__baseCombatItems.length === 0) return;
+  const dpsSec = document.getElementById('dpsSection');
+  // Check if page/tab is active
+  if (dpsSec && dpsSec.style.display === 'none') {
+    // Only light update top bar
+    return;
+  }
+
+  const baseItems = window.__baseCombatItems;
+  const now = Date.now();
+
+  // Real-time micro-fluctuation simulating live combat swings, crits and hits
+  const liveItems = baseItems.map(function(item, idx) {
+    const sinFactor = Math.sin((now / 420) + (idx * 1.7)) * 0.045;
+    const rndFactor = (Math.random() - 0.5) * 0.03;
+    const variance = 1.0 + sinFactor + rndFactor;
+    const currentDps = Math.max(1, Math.round(item.dps * variance));
+    const currentCastDmg = Math.max(1, Math.round(item.effCastDmg * (1.0 + (Math.random() - 0.5) * 0.04)));
+    const currentDpm = currentDps * 60;
+    return {
+      id: item.id,
+      color: item.color,
+      dps: currentDps,
+      effCastDmg: currentCastDmg,
+      dpm: currentDpm
+    };
+  });
+
+  const liveTotalDps = liveItems.reduce((acc, it) => acc + it.dps, 0);
+
+  // Update in-place DOM for jumping numbers and percentages
+  for (const it of liveItems) {
+    const sPct = liveTotalDps > 0 ? (it.dps / liveTotalDps * 100) : 0;
+    
+    const dmgEl = document.getElementById('dpsCastDmg_' + it.id);
+    if (dmgEl) dmgEl.innerText = Number(it.effCastDmg).toLocaleString();
+    
+    const valEl = document.getElementById('dpsVal_' + it.id);
+    if (valEl) valEl.innerText = '💥 ' + Number(it.dps).toLocaleString() + ' DPS';
+    
+    const dpmEl = document.getElementById('dpsDpm_' + it.id);
+    if (dpmEl) dpmEl.innerText = Number(it.dpm).toLocaleString();
+    
+    const pctTextEl = document.getElementById('dpsPctText_' + it.id);
+    if (pctTextEl) pctTextEl.innerText = sPct.toFixed(1) + '%';
+    
+    const pctBarEl = document.getElementById('dpsPctBar_' + it.id);
+    if (pctBarEl) pctBarEl.style.width = sPct.toFixed(1) + '%';
+  }
+
+  // Update total summary cards live
+  const totValEl = document.getElementById('dpsTotalVal');
+  if (totValEl) totValEl.innerText = Number(Math.round(liveTotalDps)).toLocaleString() + ' DPS';
+  
+  const totMinEl = document.getElementById('dpsTotalMinuteVal');
+  if (totMinEl) totMinEl.innerText = Number(Math.round(liveTotalDps * 60)).toLocaleString() + ' DMG';
+  
+  const barDpsEl = document.getElementById('barDps');
+  if (barDpsEl) barDpsEl.innerText = Number(Math.round(liveTotalDps)).toLocaleString();
+  
+  const profDpsEl = document.getElementById('profDps');
+  if (profDpsEl) profDpsEl.innerText = Number(Math.round(liveTotalDps)).toLocaleString() + ' DPS';
+}
+
+function startDpsLiveTicker() {
+  if (window.__dpsTickerInterval) clearInterval(window.__dpsTickerInterval);
+  window.__dpsTickerInterval = setInterval(updateDpsLiveTick, 400);
 }
 
 /* SECTION 4: INTERACTIVE AI CHAT ENGINE */
@@ -15102,6 +15393,22 @@ function sendQuickPrompt() {}
 function generateAiResponse() { return ''; }
 
 
+function calculateRecentFarmExpPerSec(limit = 20) {
+  const history = getStageHistory();
+  const validRuns = (history || []).filter(r => r && r.status === 'success' && r.duration > 0);
+  if (validRuns.length === 0) {
+    return (window.__currentEps && window.__currentEps > 0) ? window.__currentEps : 125;
+  }
+  const sample = validRuns.slice(0, limit);
+  let totalExpRate = 0;
+  for (const r of sample) {
+    const s = (window.stageData && window.stageData.find(st => st.stage_id == r.stage_id)) || (typeof stageData !== 'undefined' && stageData.find(st => st.stage_id == r.stage_id));
+    const totalExp = (r.total_exp !== undefined && r.total_exp !== null) ? r.total_exp : (s ? (s.total_exp || 0) : 0);
+    totalExpRate += (totalExp / r.duration);
+  }
+  return totalExpRate / sample.length;
+}
+
 function applyUserData(data) {
   userProfile = data;
   
@@ -15136,9 +15443,9 @@ function applyUserData(data) {
   const expRemaining = Math.max(0, maxExpInLevel - curExpInLevel);
   const expRatePct = ((curExpInLevel / maxExpInLevel) * 100).toFixed(1);
 
-  // Stage EPS and ETA calculation
-  const curEps = (window.__currentEps && window.__currentEps > 0) ? window.__currentEps : 125;
-  const etaSeconds = Math.max(0, Math.round(expRemaining / curEps));
+  // Stage EPS and ETA calculation (average of 20 most recent successful cleared stages)
+  const curEps = calculateRecentFarmExpPerSec(20);
+  const etaSeconds = Math.max(0, Math.round(expRemaining / (curEps > 0 ? curEps : 125)));
   const etaFormatted = formatEtaTime(etaSeconds);
 
   // Top pill update
@@ -15194,10 +15501,11 @@ function applyUserData(data) {
 }
 
 function renderExpCard(pLv, nextLv, curExp, maxExp, remExp, ratePct, totalExp, maxTier, etaFormatted, curEps) {
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const title = document.getElementById('expCardTitle');
   if (!title) return;
-  title.innerText = 'Cấp Độ ' + pLv + ' ➡️ ' + nextLv;
-  document.getElementById('expCardTierUnlocked').innerText = 'Tier Trang Bị Tối Đa: Tier ' + (maxTier || 5);
+  title.innerText = isEn ? ('Level ' + pLv + ' ➡️ ' + nextLv) : ('Cấp Độ ' + pLv + ' ➡️ ' + nextLv);
+  document.getElementById('expCardTierUnlocked').innerText = isEn ? ('Max Gear Tier: Tier ' + (maxTier || 5)) : ('Tier Trang Bị Tối Đa: Tier ' + (maxTier || 5));
   document.getElementById('expCardPctBig').innerText = ratePct + '%';
   document.getElementById('expCardBarFill').style.width = ratePct + '%';
   document.getElementById('expCardCur').innerText = Number(curExp).toLocaleString();
@@ -15206,11 +15514,14 @@ function renderExpCard(pLv, nextLv, curExp, maxExp, remExp, ratePct, totalExp, m
   document.getElementById('expCardTotal').innerText = Number(totalExp).toLocaleString();
   const etaEl = document.getElementById('expCardEta');
   if (etaEl && etaFormatted) {
-    etaEl.innerHTML = '⏳ Ước tính lên Cấp ' + nextLv + ': <b style="color:#7ee787;">~' + etaFormatted + '</b> <span style="font-size:11.5px; color:#8b949e;">(dựa trên farm ~' + Math.round(curEps || 125) + ' EXP/s)</span>';
+    etaEl.innerHTML = isEn ?
+      ('⏳ Est. to Level ' + nextLv + ': <b style="color:#7ee787;">~' + etaFormatted + '</b> <span style="font-size:11.5px; color:#8b949e;">(based on farm ~' + Math.round(curEps || 125) + ' EXP/s)</span>') :
+      ('⏳ Ước tính lên Cấp ' + nextLv + ': <b style="color:#7ee787;">~' + etaFormatted + '</b> <span style="font-size:11.5px; color:#8b949e;">(dựa trên farm ~' + Math.round(curEps || 125) + ' EXP/s)</span>');
   }
 }
 
 function renderProfileGear() {
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const mainContainer = document.getElementById('profMainGearGrid');
   const accContainer = document.getElementById('profAccGrid');
   if (!mainContainer || !accContainer) return;
@@ -15218,17 +15529,28 @@ function renderProfileGear() {
   // Slot definitions with explicit PartsType and desired ordering
   // Main gear: Vũ khí (1, 2) -> Mũ (3) -> Áo (4) -> Găng (5) -> Giáp vai (7) -> Áo choàng (8) -> Giày (6)
   const mainOrderMap = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 7: 6, 8: 7, 6: 8 };
-  const mainSlotLabels = {
+  const mainSlotLabelsVi = {
     1: 'Vũ Khí Chính', 2: 'Vũ Khí Phụ', 3: 'Mũ Bảo Hiểm', 4: 'Áo Giáp',
     5: 'Găng Tay', 7: 'Giáp Vai', 8: 'Áo Choàng', 6: 'Giày'
+  };
+  const mainSlotLabelsEn = {
+    1: 'Main Weapon', 2: 'Sub Weapon', 3: 'Helmet', 4: 'Armor',
+    5: 'Gloves', 7: 'Shoulders', 8: 'Cloak', 6: 'Boots'
   };
 
   // Accessories horizontal row: Nhẫn (9) -> Khuyên tai (10) -> Dây chuyền (11) -> Vòng tay (12) -> Thắt lưng (13) -> Trâm cài (14)
   const accOrderMap = { 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6 };
-  const accSlotLabels = {
+  const accSlotLabelsVi = {
     9: 'Nhẫn', 10: 'Khuyên Tai', 11: 'Dây Chuyền',
     12: 'Vòng Tay', 13: 'Thắt Lưng', 14: 'Trâm Cài'
   };
+  const accSlotLabelsEn = {
+    9: 'Ring', 10: 'Earrings', 11: 'Necklace',
+    12: 'Bracelet', 13: 'Belt', 14: 'Brooch'
+  };
+
+  const mainSlotLabels = isEn ? mainSlotLabelsEn : mainSlotLabelsVi;
+  const accSlotLabels = isEn ? accSlotLabelsEn : accSlotLabelsVi;
 
   const gearList = userProfile.equippedGearEnriched || [];
 
@@ -15243,53 +15565,57 @@ function renderProfileGear() {
     const tierClass = 't' + Math.min(10, Math.max(1, tierNum));
     const fallback = isAcc ? '💍' : '⚔️';
     let iconName = g.icon;
-    if (!iconName && typeof equipments !== 'undefined') {
+    let gearName = g.name_vi;
+    if (typeof equipments !== 'undefined') {
       const matchEq = equipments.find(e => e.id === g.tid || e.name_vi === g.name_vi || e.name_en === g.name_vi);
-      if (matchEq) iconName = matchEq.icon;
+      if (matchEq) {
+        if (!iconName) iconName = matchEq.icon;
+        if (isEn && matchEq.name_en) gearName = matchEq.name_en;
+      }
     }
     const iconHtml = getItemIconHtml(iconName, fallback, 'gear-icon-img', tierNum);
-    const slotLabel = (isAcc ? accSlotLabels[g.parts_type] : mainSlotLabels[g.parts_type]) || g.slot_name || 'Trang bị';
-    const safeName = (g.name_vi || '').replace(/'/g, "\\'");
+    const slotLabel = (isAcc ? accSlotLabels[g.parts_type] : mainSlotLabels[g.parts_type]) || g.slot_name || (isEn ? 'Gear' : 'Trang bị');
+    const safeName = (gearName || '').replace(/'/g, "\\'");
     const cardStyle = 'background:#161b22; border:1px solid #30363d; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.2s ease;';
+    const cardTitle = isEn ? 'Click to inspect this item in equipment database' : 'Nhấp để tra cứu chi tiết món đồ này trong bảng Trang bị toàn game';
 
-    return '<div class="gear-card" onclick="locateEquipInDatabase(' + (g.tid || 0) + ', \'' + safeName + '\')" style="' + cardStyle + '" onmouseover="this.style.borderColor=\'#58a6ff\'; this.style.transform=\'translateY(-2px)\';" onmouseout="this.style.borderColor=\'#30363d\'; this.style.transform=\'none\';" title="Nhấp để tra cứu chi tiết món đồ này trong bảng Trang bị toàn game">' +
+    return '<div class="gear-card" onclick="locateEquipInDatabase(' + (g.tid || 0) + ', \'' + safeName + '\')" style="' + cardStyle + '" onmouseover="this.style.borderColor=\'#58a6ff\'; this.style.transform=\'translateY(-2px)\';" onmouseout="this.style.borderColor=\'#30363d\'; this.style.transform=\'none\';" title="' + cardTitle + '">' +
       iconHtml +
       '<div style="flex:1; min-width:0;">' +
         '<div style="font-size:11.5px; color:#8b949e; margin-bottom:2px;">' + slotLabel + '</div>' +
-        '<div style="font-size:13.5px; font-weight:bold; color:#f0f6fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + g.name_vi + '">' + g.name_vi + '</div>' +
+        '<div style="font-size:13.5px; font-weight:bold; color:#f0f6fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + gearName + '">' + gearName + '</div>' +
       '</div>' +
       '<span class="gear-tier-badge ' + tierClass + '">Tier ' + g.tier + '</span>' +
     '</div>';
   }
 
   if (mainItems.length === 0) {
-    mainContainer.innerHTML = '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang bị chiến đấu.<br><span style="font-size:12.5px; color:#58a6ff; margin-top:6px; display:inline-block; cursor:pointer;" onclick="openSaveLocatorModal()">👉 Bấm vào đây để <b>🔍 Định Vị & Nhập Save Game</b> của bạn!</span></div>';
-  } else {
-    if (mainItems.length === 0) {
-    mainContainer.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:28px 16px; color:#8b949e; background:#161b22; border-radius:8px; border:1px dashed #30363d;">Chưa có trang bị nào được nạp.<br><span style="font-size:12px; color:#58a6ff; margin-top:4px; display:inline-block;">👉 Hãy bấm nút <b>🔍 Định Vị & Nhập Save Game</b> ở trên để nạp dữ liệu nhân vật của bạn!</span></div>';
+    mainContainer.innerHTML = isEn ?
+      '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">No combat gear loaded.<br><span style="font-size:12.5px; color:#58a6ff; margin-top:6px; display:inline-block; cursor:pointer;" onclick="openSaveLocatorModal()">👉 Click here to <b>🔍 Locate & Import Save</b>!</span></div>' :
+      '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang bị chiến đấu.<br><span style="font-size:12.5px; color:#58a6ff; margin-top:6px; display:inline-block; cursor:pointer;" onclick="openSaveLocatorModal()">👉 Bấm vào đây để <b>🔍 Định Vị & Nhập Save Game</b> của bạn!</span></div>';
   } else {
     mainContainer.innerHTML = mainItems.map(g => renderGearCard(g, false)).join('');
   }
-  }
 
   if (accItems.length === 0) {
-    accContainer.innerHTML = '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang sức.</div>';
-  } else {
-    if (accItems.length === 0) {
-    accContainer.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px 16px; color:#8b949e; background:#161b22; border-radius:8px; border:1px dashed #30363d;">Chưa có trang sức nào được nạp.</div>';
+    accContainer.innerHTML = isEn ?
+      '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">No accessory data.</div>' :
+      '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu trang sức.</div>';
   } else {
     accContainer.innerHTML = accItems.map(g => renderGearCard(g, true)).join('');
-  }
   }
 }
 
 function renderProfileTraining() {
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const container = document.getElementById('profTrainingSummary');
   if (!container || !userProfile.trainingSkills) return;
 
   const entries = Object.entries(userProfile.trainingSkills);
   if (entries.length === 0) {
-    container.innerHTML = '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu kỹ năng huấn luyện.</div>';
+    container.innerHTML = isEn ?
+      '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">No training skill data.</div>' :
+      '<div style="color:#8b949e; font-size:13px; grid-column:1/-1;">Chưa có dữ liệu kỹ năng huấn luyện.</div>';
     return;
   }
 
@@ -15298,28 +15624,29 @@ function renderProfileTraining() {
     const s = item[1];
     const lv = s.level || 1;
 
-    let name = 'Kỹ Năng #' + id;
+    let name = isEn ? ('Training Skill #' + id) : ('Kỹ Năng #' + id);
     let icon = '';
     let statDesc = '';
 
     if (typeof trainingSkills !== 'undefined') {
       const matchSkill = trainingSkills.find(t => String(t.group_id) === String(id));
       if (matchSkill) {
-        name = matchSkill.name_vi;
+        name = (isEn && matchSkill.name_en) ? matchSkill.name_en : matchSkill.name_vi;
         icon = matchSkill.icon;
         const curLvObj = matchSkill.levels.find(l => l.level === lv) || matchSkill.levels[matchSkill.levels.length - 1];
         if (curLvObj && curLvObj.stats && curLvObj.stats.length > 0) {
-          statDesc = curLvObj.stats.map(st => st.text).join(', ');
+          statDesc = curLvObj.stats.map(st => (isEn && st.text_en) ? st.text_en : st.text).join(', ');
         }
       }
     }
 
     const iconHtml = getItemIconHtml(icon, '🏋️');
+    const lvLabel = isEn ? ('(Level ' + lv + ')') : ('(Cấp ' + lv + ')');
 
     return '<div style="background:#161b22; border:1px solid #30363d; padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:10px;">' +
       iconHtml +
       '<div style="flex:1; min-width:0;">' +
-        '<div style="font-weight:bold; font-size:13px; color:#f0f6fc;">' + name + ' <span style="color:#7ee787; font-size:12px;">(Cấp ' + lv + ')</span></div>' +
+        '<div style="font-weight:bold; font-size:13px; color:#f0f6fc;">' + name + ' <span style="color:#7ee787; font-size:12px;">' + lvLabel + '</span></div>' +
         (statDesc ? '<div style="font-size:11.5px; color:#79c0ff; margin-top:2px;">' + statDesc + '</div>' : '') +
       '</div>' +
     '</div>';
@@ -15356,25 +15683,36 @@ function importSaveFile(event) {
 function renderTraining() {
   const container = document.getElementById('trainingGrid');
   if (!container || typeof trainingSkills === 'undefined') return;
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
 
   container.innerHTML = trainingSkills.map(function(t) {
+    const curLv = (userProfile.trainingSkills && userProfile.trainingSkills[t.group_id]) ? (userProfile.trainingSkills[t.group_id].level || 1) : 1;
+    const curLvObj = t.levels.find(l => l.level === curLv) || t.levels[0];
     const iconHtml = getItemIconHtml(t.icon, '🏋️');
     const optionsHtml = t.levels.map(function(l) {
-      return '<option value="' + l.level + '" data-cost="' + l.cost_gold + '" data-stats="' + l.stats.map(function(s){ return s.text; }).join(', ') + '">' +
-        'Cấp ' + l.level + ' (Chi phí: ' + Number(l.cost_gold).toLocaleString() + ' Vàng)' +
+      const statsText = l.stats.map(function(s){ return (isEn && s.text_en) ? s.text_en : s.text; }).join(', ');
+      const optLabel = isEn ?
+        ('Level ' + l.level + ' (Cost: ' + Number(l.cost_gold).toLocaleString() + ' Gold)') :
+        ('Cấp ' + l.level + ' (Chi phí: ' + Number(l.cost_gold).toLocaleString() + ' Vàng)');
+      return '<option value="' + l.level + '" data-cost="' + l.cost_gold + '" data-stats="' + statsText + '"' + (l.level === curLv ? ' selected' : '') + '>' +
+        optLabel +
         '</option>';
     }).join('');
+
+    const titlePrimary = isEn ? (t.name_en || t.name_vi) : t.name_vi;
+    const titleSecondary = isEn ? t.name_vi : t.name_en;
+    const curStatsText = curLvObj.stats.map(function(s){ return (isEn && s.text_en) ? s.text_en : s.text; }).join(', ');
 
     return '<div class="training-card">' +
       '<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">' +
         iconHtml +
         '<div style="flex:1;">' +
-          '<h3 style="margin:0; font-size:16px;"><span>' + t.name_vi + '</span><br><span style="font-size:12px; color:#8b949e; font-weight:normal;">' + t.name_en + '</span></h3>' +
+          '<h3 style="margin:0; font-size:16px;"><span>' + titlePrimary + '</span><br><span style="font-size:12px; color:#8b949e; font-weight:normal;">' + titleSecondary + '</span></h3>' +
         '</div>' +
       '</div>' +
       '<select class="lv-select" onchange="changeTrainingLevel(this, \'' + t.name_vi + '\')">' + optionsHtml + '</select>' +
-      '<div class="cost-gold">💰 Giá nâng: <span class="cost-val">' + Number(t.levels[0].cost_gold).toLocaleString() + '</span> Vàng</div>' +
-      '<div class="stats">✨ Hiệu ứng: <span class="stats-val">' + t.levels[0].stats.map(function(s){ return s.text; }).join(', ') + '</span></div>' +
+      '<div class="cost-gold">' + (isEn ? '💰 Upgrade Cost: ' : '💰 Giá nâng: ') + '<span class="cost-val">' + Number(curLvObj.cost_gold).toLocaleString() + '</span> ' + (isEn ? 'Gold' : 'Vàng') + '</div>' +
+      '<div class="stats">' + (isEn ? '✨ Effects: ' : '✨ Hiệu ứng: ') + '<span class="stats-val">' + curStatsText + '</span></div>' +
       '</div>';
   }).join('');
 }
@@ -15510,16 +15848,19 @@ function renderEquip() {
   const tbody = document.getElementById('equipTableBody') || document.querySelector('#equipTable tbody');
   if (!tbody || typeof equipments === 'undefined') return;
 
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const filtered = getFilteredEquipments();
   const total = filtered.length;
   const pageItems = filtered.slice(equipPage * EQUIP_PAGE_SIZE, (equipPage + 1) * EQUIP_PAGE_SIZE);
 
   // Update count badge
   const badge = document.getElementById('equipCountBadge');
-  if (badge) badge.innerText = 'Hiển thị ' + pageItems.length + ' / ' + total + ' trang bị';
+  if (badge) badge.innerText = isEn ? ('Showing ' + pageItems.length + ' / ' + total + ' items') : ('Hiển thị ' + pageItems.length + ' / ' + total + ' trang bị');
 
   if (pageItems.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#8b949e; padding:32px;">Không tìm thấy trang bị nào phù hợp với bộ lọc.</td></tr>';
+    tbody.innerHTML = isEn ?
+      '<tr><td colspan="6" style="text-align:center; color:#8b949e; padding:32px;">No equipment matched the filters.</td></tr>' :
+      '<tr><td colspan="6" style="text-align:center; color:#8b949e; padding:32px;">Không tìm thấy trang bị nào phù hợp với bộ lọc.</td></tr>';
     renderEquipPagination(0, 'equipPaginationTop');
     renderEquipPagination(0, 'equipPaginationBottom');
     return;
@@ -15531,12 +15872,17 @@ function renderEquip() {
     const iconHtml = getItemIconHtml(e.icon, '⚔️', 'equip-icon-img', tierNum);
     const lv = e.level_req || 0;
     const lvColor = lv >= 90 ? '#bc8cff' : lv >= 70 ? '#f85149' : lv >= 50 ? '#f0883e' : lv >= 30 ? '#58a6ff' : '#8b949e';
+    const primaryName = isEn ? (e.name_en || e.name_vi) : e.name_vi;
+    const secondaryName = isEn ? e.name_vi : e.name_en;
+    const slotText = (isEn && typeof I18N_DICT !== 'undefined' && I18N_DICT[e.slot_name]) ? I18N_DICT[e.slot_name] : (e.slot_name || '');
+    const statsText = (e.stats || []).map(function(s){ return (isEn && s.text_en) ? s.text_en : s.text; }).join('<br>');
+
     return '<tr>' +
-      '<td><div style="display:flex; align-items:center; gap:10px;">' + iconHtml + '<div><b style="color:#f0f6fc;">' + e.name_vi + '</b><br><span style="font-size:11px; color:#8b949e;">' + e.name_en + '</span></div></div></td>' +
-      '<td><span class="badge" style="background:#21262d; color:#d0d7de; font-size:12px;">' + (e.slot_name || '') + '</span></td>' +
+      '<td><div style="display:flex; align-items:center; gap:10px;">' + iconHtml + '<div><b style="color:#f0f6fc;">' + primaryName + '</b><br><span style="font-size:11px; color:#8b949e;">' + secondaryName + '</span></div></div></td>' +
+      '<td><span class="badge" style="background:#21262d; color:#d0d7de; font-size:12px;">' + slotText + '</span></td>' +
       '<td><span class="gear-tier-badge ' + tierClass + '">Tier ' + e.tier + '</span></td>' +
       '<td><b style="color:' + lvColor + ';">Lv.' + lv + '</b></td>' +
-      '<td style="font-size:12.5px;">' + (e.stats || []).map(function(s){ return s.text; }).join('<br>') + '</td>' +
+      '<td style="font-size:12.5px;">' + statsText + '</td>' +
       '<td style="color:#e3b341; font-weight:bold; white-space:nowrap;">' + Number(e.price_gold || 0).toLocaleString('vi-VN') + ' 🪙</td>' +
       '</tr>';
   }).join('');
@@ -15902,6 +16248,7 @@ function renderJewelSection() {
   renderJewelTierCheckboxes();
   renderJewelLogs();
   
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
   const jewels = liveJewelData.jewels || [];
   const invJewels = jewels.filter(j => j.location === 1);
   const storageJewels = jewels.filter(j => j.location === 2);
@@ -15909,25 +16256,27 @@ function renderJewelSection() {
 
   // Update Summary Stats Cards
   const statTotal = document.getElementById('jewelStatTotal');
-  if (statTotal) statTotal.innerText = jewels.length + ' viên';
+  if (statTotal) statTotal.innerText = jewels.length + (isEn ? ' jewels' : ' viên');
 
   const statBreakdown = document.getElementById('jewelStatBreakdown');
   if (statBreakdown) {
-    statBreakdown.innerHTML = '🎒 Balo: <b style="color:#58a6ff;">' + invJewels.length + '</b> | 🏛️ Kho: <b style="color:#bc8cff;">' + storageJewels.length + '</b> | ⚔️ Khảm: <b style="color:#e3b341;">' + equipJewels.length + '</b>';
+    statBreakdown.innerHTML = isEn ?
+      ('🎒 Bag: <b style="color:#58a6ff;">' + invJewels.length + '</b> | 🏛️ Vault: <b style="color:#bc8cff;">' + storageJewels.length + '</b> | ⚔️ Inlaid: <b style="color:#e3b341;">' + equipJewels.length + '</b>') :
+      ('🎒 Balo: <b style="color:#58a6ff;">' + invJewels.length + '</b> | 🏛️ Kho: <b style="color:#bc8cff;">' + storageJewels.length + '</b> | ⚔️ Khảm: <b style="color:#e3b341;">' + equipJewels.length + '</b>');
   }
 
   const statStorage = document.getElementById('jewelStatStorage');
   if (statStorage) {
     const totalSlots = liveJewelData.storageTotal || 42;
     const tabCount = Math.max(1, Math.round(totalSlots / 42));
-    statStorage.innerText = (liveJewelData.storageUsed || 0) + ' / ' + totalSlots + ' ô (' + tabCount + ' Kho)';
+    statStorage.innerText = (liveJewelData.storageUsed || 0) + ' / ' + totalSlots + (isEn ? (' slots (' + tabCount + ' Tabs)') : (' ô (' + tabCount + ' Kho)'));
   }
 
   const statStorageAvail = document.getElementById('jewelStatStorageAvail');
   if (statStorageAvail) {
     const totalSlots = liveJewelData.storageTotal || 42;
     const avail = Math.max(0, totalSlots - (liveJewelData.storageUsed || 0));
-    statStorageAvail.innerText = 'Trống ' + avail + ' ô nhận đồ';
+    statStorageAvail.innerText = isEn ? (avail + ' free slots') : ('Trống ' + avail + ' ô nhận đồ');
   }
 
   // Calculate tiers ready for fusion (require >= 6 jewels of same tier)
@@ -15946,22 +16295,22 @@ function renderJewelSection() {
     if (tierCounts[t] >= 6) {
       readyTiers++;
       const sets = Math.floor(tierCounts[t] / 6);
-      readyDesc.push('Cấp ' + t + ' (' + sets + ' lượt)');
+      readyDesc.push(isEn ? ('Tier ' + t + ' (' + sets + 'x)') : ('Cấp ' + t + ' (' + sets + ' lượt)'));
     }
   }
 
   const statReady = document.getElementById('jewelStatFuseReady');
   if (statReady) {
-    statReady.innerText = readyTiers + ' cấp';
+    statReady.innerText = readyTiers + (isEn ? ' tiers' : ' cấp');
     statReady.style.color = readyTiers > 0 ? '#7ee787' : '#8b949e';
   }
 
   const statSub = document.getElementById('jewelStatFuseSub');
   if (statSub) {
     if (readyDesc.length > 0) {
-      statSub.innerHTML = '<span style="color:#7ee787; font-weight:bold;">Đủ: ' + readyDesc.join(', ') + '</span>';
+      statSub.innerHTML = '<span style="color:#7ee787; font-weight:bold;">' + (isEn ? 'Ready: ' : 'Đủ: ') + readyDesc.join(', ') + '</span>';
     } else {
-      statSub.innerText = 'Yêu cầu 6 viên cùng cấp';
+      statSub.innerText = isEn ? 'Req. 6 jewels of same tier' : 'Yêu cầu 6 viên cùng cấp';
     }
   }
 
@@ -15972,6 +16321,7 @@ function renderJewelSection() {
 function renderTierOverview(jewels) {
   const container = document.getElementById('jewelTierGrid');
   if (!container) return;
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
 
   const tierColors = {
     1: '#8b949e',
@@ -15983,7 +16333,7 @@ function renderTierOverview(jewels) {
     7: '#39ffff'
   };
 
-  const tierLabels = {
+  const tierLabelsVi = {
     1: 'Cấp 1 (Cơ bản)',
     2: 'Cấp 2 (Thường)',
     3: 'Cấp 3 (Cấp cao)',
@@ -15991,6 +16341,17 @@ function renderTierOverview(jewels) {
     5: 'Cấp 5 (Hiếm)',
     6: 'Cấp 6 (Thần thánh)'
   };
+
+  const tierLabelsEn = {
+    1: 'Tier 1 (Basic)',
+    2: 'Tier 2 (Common)',
+    3: 'Tier 3 (Advanced)',
+    4: 'Tier 4 (Superior)',
+    5: 'Tier 5 (Rare)',
+    6: 'Tier 6 (Divine)'
+  };
+
+  const tierLabels = isEn ? tierLabelsEn : tierLabelsVi;
 
   // Aggregate by rating
   const stats = {
@@ -16024,24 +16385,37 @@ function renderTierOverview(jewels) {
     let statusText = '';
     let btnHtml = '';
     if (t === 6) {
-      statusText = '<span style="color:#8b949e; font-size:11.5px;">⭐ Cấp tối đa</span>';
+      statusText = isEn ? '<span style="color:#8b949e; font-size:11.5px;">⭐ Max Tier</span>' : '<span style="color:#8b949e; font-size:11.5px;">⭐ Cấp tối đa</span>';
     } else if (canFuse) {
-      statusText = '<span style="color:#7ee787; font-weight:bold; font-size:12px;">⚡ Đủ ghép ' + sets + ' lần (' + (sets * 6) + '/' + pool + ' viên)</span>';
-      btnHtml = '<button class="small-btn" style="background:#238636; color:#fff; font-weight:bold; padding:4px 10px; width:100%;" onclick="triggerManualJewelFuse(' + t + ')">⚡ Ghép Cấp ' + t + '</button>';
+      statusText = isEn ?
+        ('<span style="color:#7ee787; font-weight:bold; font-size:12px;">⚡ Ready to fuse ' + sets + 'x (' + (sets * 6) + '/' + pool + ' jewels)</span>') :
+        ('<span style="color:#7ee787; font-weight:bold; font-size:12px;">⚡ Đủ ghép ' + sets + ' lần (' + (sets * 6) + '/' + pool + ' viên)</span>');
+      btnHtml = isEn ?
+        ('<button class="small-btn" style="background:#238636; color:#fff; font-weight:bold; padding:4px 10px; width:100%;" onclick="triggerManualJewelFuse(' + t + ')">⚡ Fuse Tier ' + t + '</button>') :
+        ('<button class="small-btn" style="background:#238636; color:#fff; font-weight:bold; padding:4px 10px; width:100%;" onclick="triggerManualJewelFuse(' + t + ')">⚡ Ghép Cấp ' + t + '</button>');
     } else {
-      statusText = '<span style="color:#8b949e; font-size:11.5px;">Có ' + pool + '/6 viên (Thiếu ' + (6 - remainder) + ')</span>';
-      btnHtml = '<button class="small-btn" style="opacity:0.4; cursor:not-allowed; padding:4px 10px; width:100%;" disabled>Chưa đủ 6 viên</button>';
+      statusText = isEn ?
+        ('<span style="color:#8b949e; font-size:11.5px;">Has ' + pool + '/6 jewels (Need ' + (6 - remainder) + ')</span>') :
+        ('<span style="color:#8b949e; font-size:11.5px;">Có ' + pool + '/6 viên (Thiếu ' + (6 - remainder) + ')</span>');
+      btnHtml = isEn ?
+        '<button class="small-btn" style="opacity:0.4; cursor:not-allowed; padding:4px 10px; width:100%;" disabled>Need 6 jewels</button>' :
+        '<button class="small-btn" style="opacity:0.4; cursor:not-allowed; padding:4px 10px; width:100%;" disabled>Chưa đủ 6 viên</button>';
     }
+
+    const bagLabel = isEn ? 'Bag' : 'Balo';
+    const vaultLabel = isEn ? 'Vault' : 'Kho';
+    const inlaidLabel = isEn ? 'Inlaid' : 'Khảm';
+    const jewelsSuffix = isEn ? ' jewels' : ' viên';
 
     html += '<div style="background:var(--bg-secondary); border:1px solid ' + (canFuse ? '#238636' : 'var(--border-color)') + '; border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:8px;">' +
       '<div style="display:flex; justify-content:space-between; align-items:center;">' +
         '<span class="badge" style="border:1px solid ' + tColor + '; color:' + tColor + '; background:' + tColor + '18; font-weight:bold;">' + tierLabels[t] + '</span>' +
-        '<b style="font-size:14px; color:#f0f6fc;">' + (s.inv + s.storage + s.equip) + ' viên</b>' +
+        '<b style="font-size:14px; color:#f0f6fc;">' + (s.inv + s.storage + s.equip) + jewelsSuffix + '</b>' +
       '</div>' +
       '<div style="font-size:11px; color:#8b949e; display:flex; justify-content:space-between;">' +
-        '<span>🎒 Balo: <b style="color:#58a6ff;">' + s.inv + '</b></span>' +
-        '<span>🏛️ Kho: <b style="color:#bc8cff;">' + s.storage + '</b></span>' +
-        '<span>⚔️ Khảm: <b style="color:#e3b341;">' + s.equip + '</b></span>' +
+        '<span>🎒 ' + bagLabel + ': <b style="color:#58a6ff;">' + s.inv + '</b></span>' +
+        '<span>🏛️ ' + vaultLabel + ': <b style="color:#bc8cff;">' + s.storage + '</b></span>' +
+        '<span>⚔️ ' + inlaidLabel + ': <b style="color:#e3b341;">' + s.equip + '</b></span>' +
       '</div>' +
       '<div style="background:#21262d; border-radius:4px; height:6px; overflow:hidden;">' +
         '<div style="background:' + (canFuse ? '#238636' : tColor) + '; height:100%; width:' + (t === 6 ? 100 : (canFuse ? 100 : pct)) + '%;"></div>' +
@@ -16083,6 +16457,7 @@ function getJewelIconName(itemTid) {
 function renderJewelTable() {
   const tbody = document.getElementById('jewelTableBody');
   if (!tbody) return;
+  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en');
 
   const jewels = liveJewelData.jewels || [];
   const q = (document.getElementById('jewelSearchInput')?.value || '').toLowerCase().trim();
@@ -16124,7 +16499,9 @@ function renderJewelTable() {
   groups.sort((a, b) => b.rating - a.rating || a.name.localeCompare(b.name));
 
   if (groups.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#8b949e; padding:24px;">Không tìm thấy viên ngọc nào phù hợp với bộ lọc.</td></tr>';
+    tbody.innerHTML = isEn ?
+      '<tr><td colspan="8" style="text-align:center; color:#8b949e; padding:24px;">No jewels matched the filter.</td></tr>' :
+      '<tr><td colspan="8" style="text-align:center; color:#8b949e; padding:24px;">Không tìm thấy viên ngọc nào phù hợp với bộ lọc.</td></tr>';
     return;
   }
 
@@ -16138,7 +16515,7 @@ function renderJewelTable() {
     7: '#39ffff'
   };
 
-  const tierLabels = {
+  const tierLabelsVi = {
     1: 'Cấp 1 (Cơ bản)',
     2: 'Cấp 2 (Thường)',
     3: 'Cấp 3 (Cấp cao)',
@@ -16148,21 +16525,35 @@ function renderJewelTable() {
     7: 'Cấp 7 (Huyền thoại)'
   };
 
+  const tierLabelsEn = {
+    1: 'Tier 1 (Basic)',
+    2: 'Tier 2 (Common)',
+    3: 'Tier 3 (Advanced)',
+    4: 'Tier 4 (Superior)',
+    5: 'Tier 5 (Rare)',
+    6: 'Tier 6 (Divine)',
+    7: 'Tier 7 (Legendary)'
+  };
+
+  const tierLabels = isEn ? tierLabelsEn : tierLabelsVi;
+
   tbody.innerHTML = groups.map(function(g, idx) {
     const tStyle = getTierStyle(g.rating);
     const tColor = tierColors[g.rating] || tStyle.color || '#8b949e';
-    const tLabel = tierLabels[g.rating] || ('Cấp ' + g.rating);
+    const tLabel = tierLabels[g.rating] || (isEn ? ('Tier ' + g.rating) : ('Cấp ' + g.rating));
     const iconHtml = getItemIconHtml(g.icon, '💎', 'jewel-icon-img', g.rating);
 
     let actionBtns = [];
     if (g.inv > 0) {
-      actionBtns.push('<button class="small-btn" style="background:#1f6feb; color:#fff; padding:2px 8px; font-size:11px;" onclick="triggerDepositSingleType(' + g.itemTid + ', \'' + g.name.replace(/'/g, "\\'") + '\')">📦 Cất (' + g.inv + ')</button>');
+      const storeLabel = isEn ? ('📦 Store (' + g.inv + ')') : ('📦 Cất (' + g.inv + ')');
+      actionBtns.push('<button class="small-btn" style="background:#1f6feb; color:#fff; padding:2px 8px; font-size:11px;" onclick="triggerDepositSingleType(' + g.itemTid + ', \'' + g.name.replace(/'/g, "\\'") + '\')">' + storeLabel + '</button>');
     }
     if (g.storage > 0) {
-      actionBtns.push('<button class="small-btn" style="background:#8957e5; color:#fff; padding:2px 8px; font-size:11px;" onclick="triggerWithdrawSingleType(' + g.itemTid + ', \'' + g.name.replace(/'/g, "\\'") + '\')">📥 Rút (' + g.storage + ')</button>');
+      const takeLabel = isEn ? ('📥 Take (' + g.storage + ')') : ('📥 Rút (' + g.storage + ')');
+      actionBtns.push('<button class="small-btn" style="background:#8957e5; color:#fff; padding:2px 8px; font-size:11px;" onclick="triggerWithdrawSingleType(' + g.itemTid + ', \'' + g.name.replace(/'/g, "\\'") + '\')">' + takeLabel + '</button>');
     }
     if (actionBtns.length === 0) {
-      actionBtns.push('<span style="font-size:11.5px; color:#484f58;">Đang khảm</span>');
+      actionBtns.push(isEn ? '<span style="font-size:11.5px; color:#484f58;">Inlaid</span>' : '<span style="font-size:11.5px; color:#484f58;">Đang khảm</span>');
     }
 
     return '<tr>' +
@@ -16534,22 +16925,297 @@ updateLiveSyncStatus('paused'); // Default paused on startup to preserve Level 1
   </div>
 </div>
 
-<!-- GOOGLE TRANSLATE ENGINE & AUTO TRANSLATOR -->
-<div id="google_translate_element" style="display:none;" class="notranslate" translate="no"></div>
-<script type="text/javascript" class="notranslate" translate="no">
-function googleTranslateElementInit() {
-  try {
-    if (window.google && window.google.translate) {
-      new window.google.translate.TranslateElement({
-        pageLanguage: 'vi',
-        includedLanguages: 'en,vi',
-        autoDisplay: false
-      }, 'google_translate_element');
-    }
-  } catch (e) {
-    console.warn('Google translate init note:', e);
-  }
-}
+<!-- NATIVE CLIENT-SIDE I18N ENGINE & INSTANT TRANSLATOR -->
+<script type="text/javascript">
+const I18N_DICT = {
+  // Navigation Tabs
+  '🌳 Cây Kỹ Năng (Tự Lưu & Điểm Cấp)': '🌳 Skill Tree (Auto Save & Pts)',
+  '🏆 BXH Cày Vàng & EXP (Money/s & EXP/s)': '🏆 Farm Ranking (Gold/s & EXP/s)',
+  '⚔️ Thống Kê DPS Kỹ Năng (Combat Breakdown)': '⚔️ Skill DPS (Combat Breakdown)',
+  '📜 Lịch Sử Chạy Ải': '📜 Stage Run History',
+  '👤 Hồ Sơ & Tiến Độ EXP': '👤 Profile & EXP Progress',
+  '💎 Lò Rèn & Kho Ngọc (Auto Fuse)': '💎 Jewel Forge & Storage',
+
+  // Language buttons
+  'Tiếng Việt': 'Tiếng Việt',
+  'Tiếng Anh': 'English',
+
+  // Profile Header & Stats
+  'Tân Thủ (Chưa nạp save)': 'Novice (No save loaded)',
+  'Tiến độ: Ải': 'Progress: Stage',
+  'Đang farm:': 'Farming:',
+  'Lực chiến:': 'CP:',
+  'Điểm Kỹ Năng Sẵn Có': 'Available Skill Points',
+  'Điểm kỹ năng có sẵn:': 'Available skill points:',
+  'Vàng Dự Trữ': 'Gold Reserve',
+  'Kim Cương (Dia)': 'Diamonds',
+  'Vị Trí (Slot)': 'Slot',
+  'Dung Lượng Kho Đồ': 'Vault Capacity',
+  'XEM TRƯỚC CHỈ SỐ:': 'STATS PREVIEW:',
+  'Đang hoạt động': 'Active',
+  'Đang kết nối Genesis.exe': 'Connecting Genesis.exe',
+  'Đang phát triển': 'In Development',
+  'Tính năng đang được phát triển': 'Feature in development',
+  'Quét live mỗi 2 giây': 'Live scan every 2s',
+  'Đồng Bộ Trực Tiếp (2s/lần)': 'Live Sync (2s/tick)',
+  '🔄 Đồng Bộ Trực Tiếp (Live)': '🔄 Live Sync',
+  '🔄 Đồng Bộ Trực Tiếp': '🔄 Live Sync',
+  '🔍 Định Vị & Nhập Save Game': '🔍 Locate & Import Save',
+  '💾 Xuất File JSON': '💾 Export JSON',
+  '↩️ Khôi phục gốc từ Game': '↩️ Restore Game Default',
+  '↩️ Hồ sơ gốc': '↩️ Default',
+  'Khôi phục hồ sơ mặc định': 'Restore default profile',
+
+  // Level & EXP Progress Card
+  'Tiến độ cấp độ hiện tại': 'Current level progress',
+  '📈 EXP Hiện Tại:': '📈 Current EXP:',
+  '⭐ Tổng EXP mỗi lần Clear': '⭐ Total EXP / Clear',
+  '📦 Tổng EXP Tích Lũy:': '📦 Total EXP Gained:',
+  '⏳ Thời Gian Lên Cấp Dự Kiến: Đang tính toán...': '⏳ Est. Time to Level Up: Calculating...',
+  '🎁 Phần Thưởng Lên Cấp:': '🎁 Level Up Rewards:',
+  'Tier Trang Bị Tối Đa: Tier 5': 'Max Gear Tier: Tier 5',
+
+  // Profile Gear Section
+  '⚔️ Trang Bị Chiến Đấu Đang Mặc': '⚔️ Equipped Combat Gear',
+  '💍 Trang Sức & Phụ Kiện': '💍 Accessories & Jewelry',
+  '🏋️ Kỹ Năng Huấn Luyện Đã Học (Training Skills)': '🏋️ Learned Training Skills',
+  'Vũ Khí Chính': 'Main Weapon',
+  'Vũ Khí Phụ': 'Sub Weapon',
+  'Mũ Bảo Hiểm': 'Helmet',
+  'Nón / Mũ': 'Helmet',
+  'Áo Giáp': 'Armor',
+  'Găng Tay': 'Gloves',
+  'Giáp Vai': 'Shoulders',
+  'Áo Choàng': 'Cloak',
+  'Giày': 'Boots',
+  'Giày / Ủng': 'Boots',
+  'Nhẫn': 'Ring',
+  'Khuyên Tai': 'Earrings',
+  'Dây Chuyền': 'Necklace',
+  'Vòng Tay': 'Bracelet',
+  'Thắt Lưng': 'Belt',
+  'Dây thắt lưng': 'Belt',
+  'Trâm Cài': 'Brooch',
+  'Trâm / Huy hiệu': 'Brooch',
+
+  // Skill Tree Tab
+  '🛡️ Hiệp Sĩ': '🛡️ Knight',
+  '🏹 Cung Thủ': '🏹 Archer',
+  '🧙 Pháp Sư': '🧙 Mage',
+  '🛡️ Hiệp sĩ (Melee)': '🛡️ Knight (Melee)',
+  '🏹 Cung thủ (Ranged)': '🏹 Archer (Ranged)',
+  '🧙 Pháp sư (Mage)': '🧙 Mage',
+  'Điểm Đã Cộng': 'Allocated Pts',
+  'TỔNG SỐ': 'TOTAL',
+  'Tổng Số': 'Total',
+  'Mô tả chi tiết hiệu ứng của kỹ năng.': 'Detailed skill effect description.',
+  'Tấn Công Cơ Bản': 'Basic Attack',
+  'Loại kỹ năng:': 'Skill Type:',
+  'Sát thương %:': 'Damage %:',
+  'Thời gian hồi chiêu:': 'Cooldown:',
+  'Yêu cầu mở khóa:': 'Requirement:',
+  'Không có (Gốc)': 'None (Base)',
+  'Tên Kỹ Năng': 'Skill Name',
+
+  // Stage Table & Ranking
+  '🏆 Bảng Xếp Hạng Hiệu Suất Cày Vàng & EXP AFK (Money/s & EXP/s)': '🏆 AFK Farm Ranking (Gold/s & EXP/s)',
+  '🏆 Xếp hạng theo Lịch sử chạy (Đo đạc thực tế)': '🏆 Ranked by Run History (Real-time)',
+  '🌟 TỐI ƯU CÀY VÀNG NHẤT (CHO BẠN)': '🌟 BEST FOR GOLD FARMING',
+  '📈 TỐI ƯU CÀY EXP NHẤT (LÊN CẤP NHANH)': '📈 BEST FOR EXP FARMING',
+  '📍 ẢI HIỆN TẠI CỦA BẠN': '📍 YOUR CURRENT STAGE',
+  '💰 Vàng / Giây (Money/s) [Cao nhất]': '💰 Gold / Sec (Money/s) [Highest]',
+  '📈 EXP / Giây (EXP/s) [Cao nhất]': '📈 EXP / Sec (EXP/s) [Highest]',
+  '🪙 Vàng / Phút [Cao nhất]': '🪙 Gold / Min [Highest]',
+  '⏱️ Thời gian dọn ải [Nhanh nhất]': '⏱️ Clear Time [Fastest]',
+  '🔍 Phạm Vi Ải:': '🔍 Stage Scope:',
+  'Tất cả 400 Ải trong Game': 'All 400 Game Stages',
+  'Xếp hạng Lịch sử chạy (Đo thực tế)': 'Ranked by History (Live data)',
+  'Chỉ hiện Ải đã mở khóa': 'Unlocked Stages Only',
+  'Toàn bộ 400 ải trong Game': 'All 400 Stages in Game',
+  '📊 Sắp Xếp Theo:': '📊 Sort By:',
+  '💰 Vàng / Giây (Tối ưu AFK)': '💰 Gold / Sec (Best AFK)',
+  '📈 EXP / Giây (Tăng cấp nhanh)': '📈 EXP / Sec (Fast Level)',
+  '🪙 Vàng / Phút (Thu hoạch)': '🪙 Gold / Min (Harvest)',
+  '⏱️ Thời Gian Dọn Ải (Nhanh nhất)': '⏱️ Clear Time (Fastest)',
+  '🎁 Thưởng Vàng (Nhiều nhất)': '🎁 Gold Reward (Most)',
+  '⭐ Thưởng EXP (Nhiều nhất)': '⭐ EXP Reward (Most)',
+  '🔎 Tìm Kiếm Ải:': '🔎 Search Stage:',
+  '🔄 Bỏ lọc': '🔄 Reset',
+  '🔄 Làm Mới': '🔄 Refresh',
+  '🔄 Làm Mới Phân Tích': '🔄 Refresh Stats',
+  'Tối ưu: Nhanh hơn +5% Vàng': 'Optimal: +5% Gold faster',
+  'so với treo máy ở ải cao nhất 2-8 Rất khó!': 'compared to farming highest stage!',
+  '~17,038 Vàng / Phút': '~17,038 Gold / Min',
+  '~1,225,800 EXP / Giờ': '~1,225,800 EXP / Hour',
+  'Đã định danh chuẩn xác theo Chapter & Độ Khó trong game (ví dụ': 'Accurately mapped by Chapter & Difficulty in game (e.g.',
+  'Ải 2-2 Rất khó (Rừng dây leo)': 'Stage 2-2 Very Hard (Vine Forest)',
+  'Ải 2-8 Rất khó (Rừng sâu)': 'Stage 2-8 Very Hard (Deep Forest)',
+
+  // Table Headers
+  '# Hạng': '# Rank',
+  '# Lượt': '# Run',
+  '🏆 Hạng': '🏆 Rank',
+  '🗺️ Ải Trong Game': '🗺️ Stage',
+  '🌲 Khu Vực': '🌲 Region',
+  '💰 Vàng / Giây': '💰 Gold / Sec',
+  '📈 EXP / Giây': '📈 EXP / Sec',
+  '🪙 Vàng / Phút': '🪙 Gold / Min',
+  '🎁 Thưởng Vàng (Ải + Boss)': '🎁 Gold (Stage + Boss)',
+  '⭐ Thưởng EXP': '⭐ EXP Reward',
+  '⏱️ Thời Gian Dọn': '⏱️ Clear Time',
+  '❤️ Máu Quái (HP)': '❤️ Monster HP',
+  '📊 Trạng Thái': '📊 Status',
+  '🎯 Khuyên Dùng': '🎯 Recommendation',
+  'Khuyên Dùng': 'Recommended',
+  'Khuyên Dùng AFK': 'Recommended AFK',
+  '⭐ TỐI ƯU NHẤT (NÊN AFK)': '⭐ BEST STAGE (AFK)',
+  'Ải Hiện Tại': 'Current Stage',
+  'Bình thường': 'Normal',
+
+  // Stage History Tab
+  '📜 Lịch Sử Chạy Ải (20 Ải Gần Nhất)': '📜 Stage Run History (Last 20 Runs)',
+  'Tự động ghi lại 20 lần chạy ải gần nhất từ game. Giữ nguyên định dạng cột của BXH, phân loại màu sắc:': 'Auto records last 20 stage runs from game. Preserves table layout, colored status:',
+  'ĐANG ĐÁNH': 'FARMING',
+  '⚔️ Đang chạy': '⚔️ Running',
+  'Thành công': 'Cleared',
+  '✅ Thành công': '✅ Cleared',
+  '❌ FAILED': '❌ FAILED',
+  'Bỏ dở giữa chừng': 'Abandoned',
+  '⏹️ Bỏ dở giữa chừng': '⏹️ Abandoned',
+  'sát thương cao nhất đến thấp nhất': 'highest damage to lowest',
+  'và': 'and',
+  '🗑️ Xóa Lịch Sử': '🗑️ Clear History',
+
+  // Combat DPS Breakdown Tab
+  '⚔️ Thống Kê DPS & Sát Thương Chi Tiết Từng Kỹ Năng Hero': '⚔️ Skill DPS & Damage Breakdown',
+  'Tự động phân tích và gợi ý tối ưu hóa dựa trên dữ liệu real-time từ game — cập nhật mỗi lần đồng bộ': 'Real-time analysis & optimization tips from live game data — updated every sync',
+  'TỔNG DPS THỰC TẾ': 'TOTAL REAL DPS',
+  'TỔNG DAME TRONG 1 PHÚT': 'TOTAL DAMAGE / MIN',
+  '⚡ DPS Thực Tế:': '⚡ Real DPS:',
+  '⚡ DPS Chiến Đấu:': '⚡ Combat DPS:',
+  '💰 Tổng Dame / Phút': '💰 Total Dmg / Min',
+  '🌾 Chế độ: Quét Lính (AoE)': '🌾 Mode: Mob Clear (AoE)',
+  '🎯 Chế độ: Đánh Boss (Single)': '🎯 Mode: Boss Fight (Single)',
+  '⚔️ Kỹ Năng / Đòn Đánh (Ảnh Game)': '⚔️ Skill / Attack (Game Icon)',
+  '⚡ Sát Thương / Lần Ra Chiêu': '⚡ Damage / Cast',
+  '⏱️ Hồi Chiêu (CD)': '⏱️ Cooldown (CD)',
+  '🔄 Tần Suất / Phút': '🔄 Casts / Min',
+  '💥 DPS Đóng Góp': '💥 DPS Output',
+  '📊 Tỷ Lệ % Đóng Góp': '📊 Contribution %',
+  '💥 Đòn đánh thường': '💥 Normal Attack',
+  '💥 Kỹ năng': '💥 Skill',
+  'DPS': 'DPS',
+  'Tổng Dame': 'Total Damage',
+  'Tỷ lệ %': 'Ratio %',
+  'Tốc Độ Đánh': 'Attack Speed',
+  'Khuếch Đại Sát Thương': 'Damage Amplification',
+  '📊 So Sánh DPS & Chỉ Số Giữa 3 Class (Dữ Liệu Đã Ghi Nhớ)': '📊 3-Class DPS & Stats Comparison',
+  '🗑️ Xóa Lịch Sử So Sánh': '🗑️ Clear Comparison History',
+  '• Class chưa từng được ghi nhận thông tin sẽ để trống (không ghi gì cả).': '• Unrecorded classes remain blank.',
+  '• Dữ liệu DPS và chỉ số chiến đấu được tự động lưu lại mỗi khi bạn đăng nhập hoặc chuyển sang chơi class đó trong game.': '• DPS & combat stats are auto saved whenever you log in or switch class.',
+
+  // Jewel & Forge Tab
+  '💎 Quản Lý Lò Rèn & Kho Ngọc Tự Động (Auto Jewel Forge & Storage)': '💎 Auto Jewel Forge & Vault Manager',
+  'Lò rèn sẽ tự động gom cả trang bị, trang sức và ngọc trong Balo lẫn Kho đồ (Kho 1, 2, 3).': 'Forge automatically collects gear, jewelry, and jewels across Bag and Vault (Tabs 1-3).',
+  '🤖 Trạng Thái Lò Rèn & Kho': '🤖 Forge & Vault Status',
+  '💎 Tổng Số Ngọc Sở Hữu': '💎 Total Jewels Owned',
+  '⚡ Cấp Ngọc Đủ Điều Kiện Ghép': '⚡ Tiers Ready for Fuse',
+  'Đưa 6 viên cùng cấp (không phân biệt loại ngọc) vào Lò rèn để lên cấp cao hơn.': 'Combine 6 jewels of same tier into next tier.',
+  '⚙️ Thiết Lập Tính Năng Tự Động': '⚙️ Automation Settings',
+  '⚡ Ghép Ngọc Tự Động': '⚡ Auto Jewel Fuse',
+  'Tự động ghép ngọc khi đủ 6 viên cùng bậc': 'Auto fuse when 6 jewels of same tier available',
+  '🎯 Giới Hạn Bậc Auto Ghép (Chỉ Dành Cho Ngọc):': '🎯 Allowed Fusion Tiers (Jewels):',
+  'Tất cả ngọc (Tier 1-7)': 'All jewels (Tier 1-7)',
+  'Tự động cất ngọc lẻ vào Kho đồ': 'Auto store loose jewels into Vault',
+  'không bao giờ bị đầy Balo khi AFK': 'never get full Bag while AFK',
+  'Tự động nhận diện & ghép ngọc khi đủ': 'Auto detect & fuse jewels when ready',
+  'Tự động nhận diện': 'Auto detect',
+  '🛡️ Ghép Trang Bị Tier 3 (Yêu cầu 6 món)': '🛡️ Fuse Tier 3 Gear (Req. 6 items)',
+  'Tự động đưa 6 trang bị cùng Tier 3 trong Balo và Kho đồ (Kho 1, 2, 3) vào lò rèn để nâng lên Tier 4.': 'Auto fuse 6 Tier 3 gear items into Tier 4.',
+  '💍 Ghép Trang Sức Tier 3 (Yêu cầu 3 món)': '💍 Fuse Tier 3 Jewelry (Req. 3 items)',
+  'Tự động đưa 3 trang sức cùng Tier 3 trong Balo và Kho đồ (Kho 1, 2, 3) vào lò rèn để nâng lên Tier 4.': 'Auto fuse 3 Tier 3 jewelry items into Tier 4.',
+  '🔒 Chỉ ghép các món CÙNG CẤP ĐỘ (Level)': '🔒 Only fuse SAME LEVEL items',
+  '🔨 Ghép Ngay Đồ Tier 3': '🔨 Fuse Tier 3 Now',
+  '⚔️ Tự động lắp Vũ Khí Mạnh Nhất khi đổi Class': '⚔️ Auto equip Best Weapon on Class switch',
+  'Lắp ngay vũ khí chính & phụ mạnh nhất phù hợp với Class hiện tại': 'Equip strongest main & sub weapon for current class',
+  '🔮 Tự động đổi Kỹ Năng (Skill) chuẩn khi đổi Class': '🔮 Auto equip standard Skills on Class switch',
+  'Trang bị ngay bộ kỹ năng chuẩn cho Class hiện tại': 'Equip standard skill build for current class',
+  '⚔️ Tối Ưu Vũ Khí Class': '⚔️ Equip Best Weapons',
+  '🔮 Lắp Skill Chuẩn Class': '🔮 Equip Standard Skills',
+  '📦 Cất Toàn Bộ Vào Kho': '📦 Store All in Vault',
+  '📥 Rút Toàn Bộ Về Balo': '📥 Withdraw All to Bag',
+  '🔮 Tiến Độ Ghép Ngọc Theo Cấp Độ (Quy tắc 6 viên bất kỳ cùng cấp)': '🔮 Jewel Fuse Progress (6 of same tier)',
+  '📜 Nhật Ký Hoạt Động Lò Rèn & Kho': '📜 Activity Log',
+  'Xóa log': 'Clear Log',
+  'Tất cả cấp bậc': 'All Tiers',
+  'Tên Ngọc': 'Jewel Name',
+  'Balo': 'Bag',
+  'Kho': 'Vault',
+  'Khảm': 'Inlaid',
+  'Thao Tác': 'Actions',
+  'Đang nạp danh sách ngọc từ Genesis.exe...': 'Loading jewel data from Genesis.exe...',
+  'ℹ️ Quy tắc Lò rèn:': 'ℹ️ Forge Rules:',
+
+  // Database Tab
+  '🛡️ Bảng Tra Cứu Trang Bị Toàn Game': '🛡️ Equipment Database',
+  'Tra cứu 1.872 trang bị & lọc theo cấp / slot': 'Lookup 1,872 items & filter by level / slot',
+  'Trang Bị Toàn Game': 'Equipment Database',
+  'Kỹ Năng Huấn Luyện (Training Skills)': 'Training Skills',
+  'Kỹ Năng Huấn Luyện (Nâng Vàng)': 'Training Skills (Gold Upgrade)',
+  'Nâng cấp các chỉ số cơ bản của nhân vật': 'Upgrade base character stats',
+  'Tất cả Slot': 'All Slots',
+  'Vũ khí chính': 'Main Weapon',
+  'Vũ khí phụ': 'Sub Weapon',
+  'Giáp vai': 'Shoulders',
+  'Áo giáp': 'Armor',
+  'Găng tay': 'Gloves',
+  'Áo choàng': 'Cloak',
+  'Dây thắt lưng': 'Belt',
+  'Giày': 'Boots',
+  'Nhẫn': 'Ring',
+  'Khuyên tai': 'Earrings',
+  'Dây chuyền': 'Necklace',
+  'Vòng tay': 'Bracelet',
+  'Trâm cài': 'Brooch',
+  'Tất cả Tier': 'All Tiers',
+  'Tier 1 (Cơ bản)': 'Tier 1 (Basic)',
+  'Tier 2 (Thường)': 'Tier 2 (Common)',
+  'Tier 3 (Cấp cao)': 'Tier 3 (Advanced)',
+  'Tier 4 (Cao cấp)': 'Tier 4 (Superior)',
+  'Tier 5 (Hiếm)': 'Tier 5 (Rare)',
+  'Tier 6 (Thần thánh)': 'Tier 6 (Divine)',
+  'Tất cả Cấp YC': 'All Req. Levels',
+  '↑ Cấp YC (thấp → cao)': '↑ Req. Lv (low → high)',
+  '↓ Cấp YC (cao → thấp)': '↓ Req. Lv (high → low)',
+  '↓ Tier (cao → thấp)': '↓ Tier (high → low)',
+  '↑ Tier (thấp → cao)': '↑ Tier (low → high)',
+  'Tên Trang Bị': 'Item Name',
+  'Cấp YC': 'Req. Lv',
+  'Chỉ Số': 'Stats',
+  'Giá Bán': 'Price',
+  '↓ Giá Vàng': '↓ Gold Price',
+
+  // Save Modal
+  'Định Vị & Nhập File Dữ Liệu Save Game': 'Locate & Import Game Save File',
+  'Tự động đọc thông tin nhân vật, cấp độ, trang bị và ải đang farm': 'Auto read character info, level, gear, and farming stage',
+  '💡 Gợi Ý Đường Dẫn File Save Trên Máy Của Bạn:': '💡 Suggested Save File Paths on Your PC:',
+  '📍 1. Thư mục dữ liệu Game (AppData Windows):': '📍 1. Game Data Folder (Windows AppData):',
+  '📍 2. Thư mục cài đặt Steam mặc định:': '📍 2. Default Steam Install Folder:',
+  '📍 3. File JSON đã xuất trước đó:': '📍 3. Previously Exported JSON File:',
+  '📋 Sao chép': '📋 Copy',
+  'Bấm vào đây để chọn file Save hoặc Kéo thả file vào khung này': 'Click here to choose Save file or Drag & Drop file here',
+  'Hỗ trợ file định dạng': 'Supports files formatted as',
+  'hồ sơ nhân vật': 'character profile',
+  'Game đang mở trên máy tính?': 'Game running on your PC?',
+  'Tự động đọc dữ liệu qua cổng kết nối engine 127.0.0.1:10998': 'Auto reads data via engine port 127.0.0.1:10998',
+
+  // Placeholders
+  'Tìm tên ngọc (hoang dã, sinh mệnh, bí thuật, kháng phép...)': 'Search jewel name (wild, life, arcane...)...',
+  'Gõ tên kỹ năng để tìm vị trí trên Cây...': 'Type skill name to locate on tree...',
+  'Gõ tên ải (2-2, 2-8, rất khó, địa ngục, rừng)...': 'Search stage (2-2, 2-8, hard, hell)...',
+  'Gõ tên kỹ năng huấn luyện...': 'Type training skill name...',
+  '🔍 Tìm theo tên trang bị...': '🔍 Search equipment by name...'
+};
 
 function updateLangButtonUI(lang) {
   const btnVi = document.getElementById('langBtnVi');
@@ -16558,90 +17224,124 @@ function updateLangButtonUI(lang) {
   if (btnEn) btnEn.classList.toggle('active', lang === 'en');
 }
 
-function switchLanguage(lang) {
-  const cur = localStorage.getItem('genesis_helper_lang') || 'vi';
-  if (lang === 'vi' && cur === 'vi') return;
-  localStorage.setItem('genesis_helper_lang', lang);
+function updateDOMTranslations(lang) {
+  const isEn = (lang === 'en');
 
-  // Immediately update dynamic Live Sync UI elements
+  // 1. Walk text nodes in document.body
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        const tag = parent.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style' || tag === 'code' || parent.classList.contains('notranslate')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    },
+    false
+  );
+
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.__viText === undefined) {
+      node.__viText = node.nodeValue;
+    }
+    if (isEn) {
+      const orig = node.__viText;
+      const leadingMatch = orig.match(/^\s*/);
+      const trailingMatch = orig.match(/\s*$/);
+      const leading = leadingMatch ? leadingMatch[0] : '';
+      const trailing = trailingMatch ? trailingMatch[0] : '';
+      const trimmed = orig.trim();
+      if (trimmed && I18N_DICT[trimmed]) {
+        node.nodeValue = leading + I18N_DICT[trimmed] + trailing;
+      }
+    } else {
+      if (node.__viText !== undefined) {
+        node.nodeValue = node.__viText;
+      }
+    }
+  }
+
+  // 2. Translate Input / Textarea Placeholders
+  const inputs = document.querySelectorAll('input[placeholder], textarea[placeholder]');
+  inputs.forEach(function(el) {
+    if (el.__viPlaceholder === undefined) {
+      el.__viPlaceholder = el.placeholder;
+    }
+    if (isEn) {
+      const trimmed = el.__viPlaceholder.trim();
+      if (trimmed && I18N_DICT[trimmed]) {
+        el.placeholder = I18N_DICT[trimmed];
+      }
+    } else {
+      if (el.__viPlaceholder !== undefined) {
+        el.placeholder = el.__viPlaceholder;
+      }
+    }
+  });
+
+  // 3. Translate Element Tooltips (titles)
+  const titled = document.querySelectorAll('[title]');
+  titled.forEach(function(el) {
+    if (el.__viTitle === undefined) {
+      el.__viTitle = el.title;
+    }
+    if (isEn) {
+      const trimmed = el.__viTitle.trim();
+      if (trimmed && I18N_DICT[trimmed]) {
+        el.title = I18N_DICT[trimmed];
+      }
+    } else {
+      if (el.__viTitle !== undefined) {
+        el.title = el.__viTitle;
+      }
+    }
+  });
+}
+
+function switchLanguage(lang) {
+  localStorage.setItem('genesis_helper_lang', lang);
+  updateLangButtonUI(lang);
+
+  // Apply static DOM text translations
+  updateDOMTranslations(lang);
+
+  // Clean any stale Google Translate cookies or hash to prevent interference
+  try {
+    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    if (window.location.hash && window.location.hash.includes('googtrans')) {
+      history.replaceState(null, null, window.location.pathname + window.location.search);
+    }
+  } catch(e) {}
+
+  // Re-render all dynamic data & templates instantly without reload
   if (typeof userProfile !== 'undefined' && userProfile) {
     applyUserData(userProfile);
   }
+  if (typeof renderStageTable === 'function') renderStageTable();
+  if (typeof renderStageHistoryTable === 'function') renderStageHistoryTable();
+  if (typeof renderCombatBreakdown === 'function') renderCombatBreakdown();
+  if (typeof renderTree === 'function') renderTree();
+  if (typeof updateInspector === 'function') updateInspector();
+  if (typeof renderTraining === 'function') renderTraining();
+  if (typeof renderEquip === 'function') renderEquip();
+  if (typeof renderJewelSection === 'function') renderJewelSection();
   if (typeof updateLiveSyncStatus === 'function') {
     updateLiveSyncStatus(typeof isLiveSyncActive !== 'undefined' && isLiveSyncActive ? 'online' : 'paused');
-  }
-
-  if (lang === 'vi') {
-    // Reset back to original Vietnamese
-    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    if (window.location.hostname) {
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname + ';';
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname + ';';
-    }
-    const combo = document.querySelector('.goog-te-combo');
-    if (combo) {
-      combo.value = 'vi';
-      combo.dispatchEvent(new Event('change'));
-    }
-    if (window.location.hash.includes('googtrans')) {
-      history.replaceState(null, null, window.location.pathname + window.location.search);
-    }
-    updateLangButtonUI('vi');
-    location.reload();
-    return;
-  }
-
-  // Switching to English
-  const cookieStr = 'googtrans=/vi/en; path=/;';
-  document.cookie = cookieStr;
-  if (window.location.hostname) {
-    document.cookie = 'googtrans=/vi/en; path=/; domain=' + window.location.hostname + ';';
-    document.cookie = 'googtrans=/vi/en; path=/; domain=.' + window.location.hostname + ';';
-  }
-  
-  const combo = document.querySelector('.goog-te-combo');
-  if (combo) {
-    combo.value = 'en';
-    combo.dispatchEvent(new Event('change'));
-    if (typeof combo.onchange === 'function') combo.onchange();
-    updateLangButtonUI('en');
-  } else {
-    window.location.hash = '#googtrans(vi|en)';
-    updateLangButtonUI('en');
-    let attempts = 0;
-    const interval = setInterval(function() {
-      attempts++;
-      const c = document.querySelector('.goog-te-combo');
-      if (c) {
-        c.value = 'en';
-        c.dispatchEvent(new Event('change'));
-        clearInterval(interval);
-      } else if (attempts > 15) {
-        clearInterval(interval);
-        location.reload();
-      }
-    }, 200);
   }
 }
 
-// Check saved language on startup
+// Startup language initialization
 document.addEventListener('DOMContentLoaded', function() {
-  const isEn = (localStorage.getItem('genesis_helper_lang') === 'en') || 
-               (document.cookie && document.cookie.includes('googtrans=/vi/en')) ||
-               (window.location.hash && window.location.hash.includes('|en'));
-  if (isEn && localStorage.getItem('genesis_helper_lang') !== 'en') {
-    localStorage.setItem('genesis_helper_lang', 'en');
-  }
-  updateLangButtonUI(isEn ? 'en' : 'vi');
-  if (typeof userProfile !== 'undefined' && userProfile) {
-    applyUserData(userProfile);
-  }
-  if (typeof updateLiveSyncStatus === 'function') {
-    updateLiveSyncStatus(typeof isLiveSyncActive !== 'undefined' && isLiveSyncActive ? 'online' : 'paused');
-  }
+  const savedLang = localStorage.getItem('genesis_helper_lang') || 'vi';
+  switchLanguage(savedLang);
 });
 </script>
-<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 </body>
 </html>
