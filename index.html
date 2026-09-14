@@ -917,6 +917,15 @@ body {
         </div>
       </div>
 
+      <!-- AUTO RECONNECT CONFIRM ON NETWORK ERROR -->
+      <div class="jewel-switch-wrap" onclick="toggleAutoReconnectConfirm()">
+        <div class="jewel-switch active" id="switchAutoReconnectConfirm"></div>
+        <div>
+          <div style="font-weight:bold; font-size:13.5px; color:#58a6ff;">🌐 Tự động xác nhận kết nối lại khi lỗi mạng</div>
+          <div style="font-size:11.5px; color:#8b949e;">Khi game bị ngắt kết nối và hiện hộp thoại &quot;Kết nối lại thất bại&quot;, tự động ấn &quot;Xác nhận&quot; để kết nối lại máy chủ mà không bị gián đoạn treo máy.</div>
+        </div>
+      </div>
+
       <!-- TIER FUSION FILTER SETTINGS (ONLY FOR JEWELS) -->
       <div style="margin-top:14px; padding-top:12px; border-top:1px solid #30363d;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
@@ -13841,6 +13850,64 @@ function sendEvaluatePoll() {
         } : null;
       } catch(stErr) {}
 
+      // === AUTO CONFIRM RECONNECT ON NETWORK ERROR ===
+      let autoReconnectResult = null;
+      try {
+        if (cfg && cfg.autoReconnectConfirm) {
+          const sysPopup = nn.ui && nn.ui.manager && nn.ui.manager.getPanel ? nn.ui.manager.getPanel("PanelSystemPopup") : null;
+          if (sysPopup && sysPopup.ArrBtn && (sysPopup._isShowing || sysPopup.isShowing)) {
+            const title = (sysPopup.TxtTitle?.text || '').trim();
+            const errorMsg = (sysPopup.TxtErrorMessage?.text || '').trim();
+            const combined = (title + ' ' + errorMsg).toLowerCase();
+
+            const isNetError = combined.includes('kết nối') || 
+                               combined.includes('máy chủ') || 
+                               combined.includes('reconnect') || 
+                               combined.includes('connection') || 
+                               combined.includes('server') || 
+                               combined.includes('재접속') || 
+                               combined.includes('네트워크') || 
+                               combined.includes('network');
+
+            if (isNetError) {
+              const len = sysPopup.ArrBtn.Length !== undefined ? sysPopup.ArrBtn.Length : (sysPopup.ArrBtn.length || 0);
+              for (let i = 0; i < len; i++) {
+                const btn = sysPopup.ArrBtn.get_Item ? sysPopup.ArrBtn.get_Item(i) : sysPopup.ArrBtn[i];
+                if (!btn) continue;
+                const isActive = btn.gameObject ? (btn.gameObject.activeSelf ?? true) : true;
+                if (!isActive) continue;
+
+                const btnText = (btn.Text?.text || '').trim();
+                const lowerText = btnText.toLowerCase();
+
+                if (btnText === 'Xác nhận' || 
+                    btnText === 'Confirm' || 
+                    btnText === 'OK' || 
+                    lowerText === 'xác nhận' || 
+                    lowerText === 'confirm' || 
+                    lowerText === 'ok' || 
+                    btnText === '확인' || 
+                    btnText === '确认' || 
+                    btnText === '確認') {
+                  if (btn.onClick && typeof btn.onClick.Invoke === 'function') {
+                    btn.onClick.Invoke();
+                    autoReconnectResult = {
+                      handled: true,
+                      buttonText: btnText,
+                      title: title,
+                      message: errorMsg
+                    };
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch(e) {
+        autoReconnectResult = { error: e.toString() };
+      }
+
       return JSON.stringify({
         nickname: userC && userC._user ? userC._user._nick : 'Lee',
         level: userC && userC._user ? userC._user._lv : 33,
@@ -13869,6 +13936,7 @@ function sendEvaluatePoll() {
         prevClassType: prevClassType,
         autoEquipWeaponRes: autoEquipWeaponRes,
         autoEquipSkillRes: autoEquipSkillRes,
+        autoReconnectResult: autoReconnectResult,
         jewelsData: jewelData,
         equippedGear: equippedGear,
         stageRunHistory: stageRunHistory,
@@ -13882,6 +13950,7 @@ function sendEvaluatePoll() {
   }).toString() + ')(' + JSON.stringify({
     autoEquipWeapon: isAutoEquipWeaponOnClassSwitchActive,
     autoEquipSkill: isAutoEquipSkillOnClassSwitchActive,
+    autoReconnectConfirm: isAutoReconnectConfirmActive,
     sameLevelOnly: isFuseT3SameLevelOnlyActive,
     manualWarehouseTabs: localStorage.getItem('genesis_warehouse_tabs_mode') || 'auto',
     savedWarehouseTabs: parseInt(localStorage.getItem('genesis_detected_warehouse_tabs') || '1', 10)
@@ -13928,6 +13997,10 @@ function applyLiveGameData(data) {
       ? data.autoEquipSkillRes.skills.map(s => s.name).join(', ')
       : ((data.autoEquipSkillRes.count || 5) + ' skill');
     addJewelLog('🔮 Tự động lắp bộ kỹ năng chuẩn cho Class: [' + skillList + ']', 'success');
+  }
+  if (data.autoReconnectResult && data.autoReconnectResult.handled) {
+    const btnName = data.autoReconnectResult.buttonText || 'Xác nhận';
+    addJewelLog('🌐 Tự động ấn nút [' + btnName + '] kết nối lại game sau sự cố mạng!', 'success');
   }
   const prevStageTid = userProfile.stageTid;
   userProfile.nickname = data.nickname || userProfile.nickname;
@@ -16847,6 +16920,21 @@ function setWarehouseTabsManual(val) {
 /* CLASS SWITCH AUTO EQUIP WEAPON & SKILLS */
 let isAutoEquipWeaponOnClassSwitchActive = localStorage.getItem('genesis_auto_equip_weapon_on_class') !== 'false';
 let isAutoEquipSkillOnClassSwitchActive = localStorage.getItem('genesis_auto_equip_skill_on_class') !== 'false';
+let isAutoReconnectConfirmActive = localStorage.getItem('genesis_auto_reconnect_confirm') !== 'false';
+
+function toggleAutoReconnectConfirm() {
+  isAutoReconnectConfirmActive = !isAutoReconnectConfirmActive;
+  localStorage.setItem('genesis_auto_reconnect_confirm', isAutoReconnectConfirmActive);
+  updateAutoReconnectSwitch();
+  addJewelLog(isAutoReconnectConfirmActive
+    ? '🌐 Đã BẬT tự động xác nhận kết nối lại khi lỗi mạng.'
+    : '🌐 Đã TẮT tự động xác nhận kết nối lại khi lỗi mạng.', isAutoReconnectConfirmActive ? 'success' : 'info');
+}
+
+function updateAutoReconnectSwitch() {
+  const sBtn = document.getElementById('switchAutoReconnectConfirm');
+  if (sBtn) sBtn.className = 'jewel-switch ' + (isAutoReconnectConfirmActive ? 'active' : '');
+}
 
 function toggleAutoEquipWeaponOnClassSwitch() {
   isAutoEquipWeaponOnClassSwitchActive = !isAutoEquipWeaponOnClassSwitchActive;
@@ -16867,6 +16955,7 @@ function updateClassEquipSwitches() {
   const sSkill = document.getElementById('switchAutoEquipSkillOnClassSwitch');
   if (sWep) sWep.className = 'jewel-switch ' + (isAutoEquipWeaponOnClassSwitchActive ? 'active' : '');
   if (sSkill) sSkill.className = 'jewel-switch ' + (isAutoEquipSkillOnClassSwitchActive ? 'active' : '');
+  updateAutoReconnectSwitch();
 }
 
 function triggerManualClassEquipOpt() {
@@ -17954,6 +18043,10 @@ const I18N_DICT = {
   'Vị Trí Khảm / Mô Tả': 'Equip Slot / Description',
 
   // Disconnect & Watchdog Translations
+  '🌐 Tự động xác nhận kết nối lại khi lỗi mạng': '🌐 Auto Confirm Reconnect on Network Error',
+  'Khi game bị ngắt kết nối và hiện hộp thoại "Kết nối lại thất bại", tự động ấn "Xác nhận" để kết nối lại máy chủ mà không bị gián đoạn treo máy.': 'When disconnected and "Reconnect Failed" dialog appears, automatically clicks "Confirm" to resume connection without interrupting AFK.',
+  '🌐 Đã BẬT tự động xác nhận kết nối lại khi lỗi mạng.': '🌐 ENABLED auto-confirm reconnect on network error.',
+  '🌐 Đã TẮT tự động xác nhận kết nối lại khi lỗi mạng.': '🌐 DISABLED auto-confirm reconnect on network error.',
   'Mất kết nối tới Genesis.exe!': 'Lost connection to Genesis.exe!',
   'Đang tự động thử kết nối lại hoặc kích hoạt Steam mở lại game...': 'Auto retrying or triggering Steam relaunch...',
   '🚀 Bật Game Ngay (Steam)': '🚀 Launch Game (Steam)',
