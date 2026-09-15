@@ -10,10 +10,18 @@
 
 ---
 
+## 🔀 Fork Notice
+
+This repository is a fork/derivative of [`titlee2111/war-of-genesis-helper`](https://github.com/titlee2111/war-of-genesis-helper), redistributed under the original [MIT License](LICENSE). Changes made in this fork:
+- Refactored the single 4MB `index.html` into a multi-file dev source under `src/` (`live-sync.js`, `combat-service.js`, `catalog-service.js`, `i18n-service.js`, `index.template.html`), with `build.js` reassembling it back into the single-file `index.html` the app is still distributed as.
+- Added a Traditional Chinese (繁體中文) language, covering both the static UI and the equipment/jewel/skill-tree databases (translated content, not machine-translated at runtime).
+
+---
+
 ## 🌐 Live Web Version
 
 Access the web version instantly without installing anything:  
-👉 **`https://titlee2111.github.io/war-of-genesis-helper/`**
+👉 **`https://crkuo.github.io/war-of-genesis-helper/`**
 
 ---
 

@@ -1,0 +1,9 @@
+{
+  "name": "war-of-genesis-helper",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build script for the War of Genesis Idle Loot Helper single-file app.",
+  "scripts": {
+    "build": "node build.js"
+  }
+}
